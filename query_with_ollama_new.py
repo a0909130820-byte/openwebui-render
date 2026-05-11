@@ -1,4 +1,5 @@
 import re
+import os
 import argparse
 import numpy as np
 import requests
@@ -11,10 +12,10 @@ except Exception:
     HAVE_CE = False
 
 try:
-    import ollama
-    HAVE_OLLAMA = True
+    import google.generativeai as genai
+    HAVE_GEMINI = True
 except Exception:
-    HAVE_OLLAMA = False
+    HAVE_GEMINI = False
 
 
 # ===============================
@@ -22,6 +23,7 @@ except Exception:
 # ===============================
 QDRANT_URL = "https://1db6d8ba-525a-4ac3-a0db-8543aefe8461.eu-central-1-0.aws.cloud.qdrant.io:6333"
 QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6ODM2Mzk4MDUtYTVmNS00MzUyLWE2NWEtZWNlMWUxNWYxZTE3In0.SStK2mFTKzbEvbWc2r8B2s7TiXE68ETTKrPvmrkiJ7A"
+
 ERRCODE_RE = re.compile(r"[A-Za-z0-9]+-[A-Za-z0-9]+")
 
 _embedder = None
@@ -101,10 +103,6 @@ def qdrant_search(qdrant_url: str, collection: str, qv: np.ndarray, top_k: int =
 # Qdrant 錯誤代碼精準搜尋
 # ===============================================
 def qdrant_exact_code_search(qdrant_url: str, collection: str, code: str, limit: int = 10):
-    """
-    用 payload 欄位 error_code 做真正的精準查詢。
-    注意：Qdrant 需要先替 error_code 建立 KEYWORD index。
-    """
     base_url = qdrant_url.rstrip("/")
     url = f"{base_url}/collections/{collection}/points/scroll"
 
@@ -188,8 +186,6 @@ def retrieve_hits(
     question = question.strip()
     code_match = ERRCODE_RE.fullmatch(question)
 
-    # Step 1：如果使用者輸入的是錯誤代碼，先用 Qdrant payload error_code 精準查
-    # 這一步一定要放在 embedding / 語意搜尋之前，才不會被向量搜尋漏掉。
     if code_match:
         code = question.upper()
         print(f"→ 先用 error_code 精準查詢：{code}")
@@ -211,7 +207,6 @@ def retrieve_hits(
 
         print("→ 精準查詢找不到，改用語意搜尋")
 
-    # Step 2：精準查不到，才進入 embedding 向量搜尋
     q0 = expand_if_error_code(question)
     qv = embed_query(maybe_prefix_query(q0, emb_model_name), embedder, normalize=True)
 
@@ -219,13 +214,11 @@ def retrieve_hits(
         qdrant_url,
         qdrant_collection,
         qv,
-        top_k=max(top_k, 100)
+        top_k=max(top_k, 50)
     )
 
-    # Step 3：錯誤碼加權，避免相近錯誤碼完全被洗掉
     hits = apply_errorcode_boost_hits(hits, question, boost=boost)
 
-    # Step 4：rerank
     picked = rerank_hits(
         question,
         hits,
@@ -256,8 +249,18 @@ def build_context(hits, text_col: str = "text", max_chars: int = 5000) -> str:
     return "\n\n".join(parts)
 
 
-def generate_with_ollama(question: str, context: str, model_name: str) -> str:
-    prompt = f"""你是 CNC 超強助理維修工程師，必須解決客戶一切問題但你必須遵照一下規則。
+def generate_with_gemini(question: str, context: str, model_name: str, api_key: str) -> str:
+    if not HAVE_GEMINI:
+        raise RuntimeError("未安裝 Gemini 套件，請先執行：pip install google-generativeai")
+
+    if not api_key:
+        raise RuntimeError("找不到 GEMINI_API_KEY，請先設定環境變數。")
+
+    genai.configure(api_key=api_key)
+
+    model = genai.GenerativeModel(model_name)
+
+    prompt = f"""你是 CNC 超強助理維修工程師，必須解決客戶一切問題但你必須遵照以下規則。
 
 回答規則：
 1. 只能根據「知識片段」回答。
@@ -266,13 +269,14 @@ def generate_with_ollama(question: str, context: str, model_name: str) -> str:
 4. 如果某個欄位在知識片段沒有寫，該欄位請填「資料片段未提供」。
 5. 不可以輸出任何與問題無關的內容。
 6. 必須引用頁碼。
-7. 只能輸出下面三個項目，不要輸出其他說明文字。
-8.必須完整內容輸出更改
-9 Error message、Cause of error、Error correction 三個項目，不能有遺漏。
+7. 只能輸出下面四個項目，不要輸出其他說明文字。
+8. 必須完整內容輸出。
+9. Error message、Cause of error、Error correction 三個項目，不能有遺漏。
 10. 如果知識片段中同一個頁面有多個相關內容，請合併在一起回答，不要分開成多個項目。
-11Error message後面不顯示錯誤代碼但要顯示錯誤訊息
-12.客戶問中文或英文問題時不用另外補充語言說明，直接回答就好。
-13.客戶如果沒有問錯誤代碼在回答時要告訴他錯誤代碼是多少在第幾頁
+11. Error message 後面不顯示錯誤代碼，但要顯示錯誤訊息。
+12. 客戶問中文或英文問題時不用另外補充語言說明，直接回答就好。
+13. 客戶如果沒有問錯誤代碼，在回答時要告訴他錯誤代碼是多少、在第幾頁。
+
 知識片段：
 {context}
 
@@ -280,20 +284,22 @@ def generate_with_ollama(question: str, context: str, model_name: str) -> str:
 
 請固定用以下格式回答：
 1. 錯誤代碼:（如果知識片段有提供錯誤代碼就寫出來，沒有的話就寫「資料片段未提供」）
-2. Error message： 
+2. Error message：
 
 3. Cause of error：
 
 4. Error correction：
-- 
+-
 """
 
-    resp = ollama.chat(
-        model=model_name,
-        messages=[{"role": "user", "content": prompt}],
-        options={"temperature": 0.0},
+    response = model.generate_content(
+        prompt,
+        generation_config={
+            "temperature": 0.0,
+        }
     )
-    return resp["message"]["content"]
+
+    return response.text
 
 
 def print_hits(picked):
@@ -309,6 +315,7 @@ def run_once(
     emb_model_name: str,
     question: str,
     gen_model: str | None,
+    gemini_api_key: str,
     qdrant_url: str,
     qdrant_collection: str,
     top_k: int = 30,
@@ -333,22 +340,20 @@ def run_once(
     print_hits(picked)
 
     if gen_model:
-        if not HAVE_OLLAMA:
-            raise RuntimeError("未安裝 ollama 套件，請先：pip install ollama")
-
         context = build_context(picked, text_col="text", max_chars=5000)
 
         print("\n=== CONTEXT DEBUG ===")
         print(context)
 
-        print("\n=== 生成答案 ===\n")
-        out = generate_with_ollama(question, context, gen_model)
+        print("\n=== Gemini 生成答案 ===\n")
+        out = generate_with_gemini(question, context, gen_model, gemini_api_key)
         print(out)
 
 
 def interactive_loop(
     emb_model_name: str,
     gen_model: str | None,
+    gemini_api_key: str,
     qdrant_url: str,
     qdrant_collection: str,
     prompt_label: str = "錯誤代碼/問題：",
@@ -360,8 +365,9 @@ def interactive_loop(
     embedder = get_embedder(emb_model_name)
     get_cross_encoder(rerank_model)
 
-    print("\n=== 查詢就緒（Qdrant Cloud + Ollama） ===")
+    print("\n=== 查詢就緒（Qdrant Cloud + Gemini） ===")
     print(f"- 使用嵌入模型：{emb_model_name}")
+    print(f"- 生成模型：{gen_model}")
     print(f"- Qdrant Cloud：{qdrant_url} / collection={qdrant_collection}")
     print("提示：輸入空行離開。")
 
@@ -391,30 +397,30 @@ def interactive_loop(
         print_hits(picked)
 
         if gen_model:
-            if not HAVE_OLLAMA:
-                print("\n（未安裝 ollama 套件，無法生成答案；請先安裝：pip install ollama）")
-                continue
-
             context = build_context(picked, text_col="text", max_chars=5000)
 
             print("\n=== CONTEXT DEBUG ===")
             print(context)
 
-            print("\n=== 生成答案 ===\n")
+            print("\n=== Gemini 生成答案 ===\n")
             try:
-                out = generate_with_ollama(q, context, gen_model)
+                out = generate_with_gemini(q, context, gen_model, gemini_api_key)
                 print(out)
             except Exception as e:
                 print(f"(生成失敗：{e})")
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Qdrant Cloud 查詢 + 錯誤碼精準搜尋 + CrossEncoder 重排 + Ollama 回答")
+    ap = argparse.ArgumentParser(
+        description="Qdrant Cloud 查詢 + 錯誤碼精準搜尋 + CrossEncoder 重排 + Gemini 回答"
+    )
+
     ap.add_argument("--model", default="BAAI/bge-m3", help="Embedding 模型名稱")
     ap.add_argument("--qdrant-url", default=QDRANT_URL, help="Qdrant Cloud URL")
     ap.add_argument("--qdrant-collection", default="error_codes", help="Qdrant collection 名稱")
     ap.add_argument("--question", "-q", default="", help="直接發問；留空則進入互動模式")
-    ap.add_argument("--gen-model", default="gemma3:12b", help="Ollama 模型名稱")
+    ap.add_argument("--gen-model", default="gemini-2.5-flash", help="Gemini 模型名稱")
+    ap.add_argument("--gemini-api-key", default=os.getenv("GEMINI_API_KEY", ""), help="Gemini API Key")
     ap.add_argument("--top-k", type=int, default=30, help="初步檢索片段數")
     ap.add_argument("--boost", type=float, default=0.2, help="錯誤代碼命中加權值")
     ap.add_argument("--prompt", default="錯誤代碼/問題：", help="互動模式提示文字")
@@ -428,6 +434,7 @@ def main():
             emb_model_name=args.model,
             question=args.question.strip(),
             gen_model=args.gen_model.strip() or None,
+            gemini_api_key=args.gemini_api_key,
             qdrant_url=args.qdrant_url,
             qdrant_collection=args.qdrant_collection,
             top_k=args.top_k,
@@ -439,6 +446,7 @@ def main():
         interactive_loop(
             emb_model_name=args.model,
             gen_model=args.gen_model.strip() or None,
+            gemini_api_key=args.gemini_api_key,
             qdrant_url=args.qdrant_url,
             qdrant_collection=args.qdrant_collection,
             prompt_label=args.prompt,
