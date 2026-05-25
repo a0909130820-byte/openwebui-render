@@ -12,7 +12,7 @@ except Exception:
     HAVE_CE = False
 
 try:
-    import google.generativeai as genai
+    from google import genai
     HAVE_GEMINI = True
 except Exception:
     HAVE_GEMINI = False
@@ -230,73 +230,167 @@ def retrieve_hits(
     return picked
 
 
-def build_context(hits, text_col: str = "text", max_chars: int = 5000) -> str:
-    parts, total = [], 0
+def build_context(hits, max_chars: int = 7000) -> str:
+    parts = []
+    total = 0
 
     for h in hits:
-        prefix = f"(page={h.get('page', '?')}) "
-        t = prefix + str(h.get(text_col, "")).strip().replace("\n", " ")
+        page = h.get("page", "?")
+        section = h.get("section", "")
+        major_title = h.get("major_title", "")
+        minor_title = h.get("minor_title", "")
+        content_type = h.get("content_type", "")
+        table_columns = h.get("table_columns", [])
+        version = h.get("version", "")
+        date = h.get("date", "")
+        maintenance_person = h.get("maintenance_person", "")
+        text = str(h.get("text", "")).strip()
 
-        if total + len(t) > max_chars:
-            t = t[:max(0, max_chars - total)]
+        block = f"""
+page: {page}
+section: {section}
+major_title: {major_title}
+minor_title: {minor_title}
+content_type: {content_type}
+"""
 
-        parts.append(t)
-        total += len(t)
+        if table_columns:
+            block += f"table_columns: {table_columns}\n"
 
-        if total >= max_chars:
+        if version:
+            block += f"version: {version}\n"
+
+        if date:
+            block += f"date: {date}\n"
+
+        if maintenance_person:
+            block += f"maintenance_person: {maintenance_person}\n"
+
+        block += f"text: {text}\n"
+
+        block = block.strip()
+
+        if total + len(block) > max_chars:
             break
+
+        parts.append(block)
+        total += len(block)
 
     return "\n\n".join(parts)
 
 
 def generate_with_gemini(question: str, context: str, model_name: str, api_key: str) -> str:
     if not HAVE_GEMINI:
-        raise RuntimeError("未安裝 Gemini 套件，請先執行：pip install google-generativeai")
+        raise RuntimeError("未安裝 Gemini 套件，請先執行：pip install google-genai==1.66.0")
 
     if not api_key:
         raise RuntimeError("找不到 GEMINI_API_KEY，請先設定環境變數。")
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
-    model = genai.GenerativeModel(model_name)
+    prompt = f"""你是 L2100 CNC 車床維護與故障分析 AI 助理。
 
-    prompt = f"""你是 CNC 超強助理維修工程師，必須解決客戶一切問題但你必須遵照以下規則。
+你只能根據「知識片段」內容回答。
+禁止自行推測。
+禁止補充知識片段不存在的內容。
 
-回答規則：
-1. 只能根據「知識片段」回答。
-2. 不可以補充知識片段以外的內容。
-3. 不可以自行推測知識片段沒有提供的內容。
-4. 如果某個欄位在知識片段沒有寫，該欄位請填「資料片段未提供」。
-5. 不可以輸出任何與問題無關的內容。
-6. 必須引用頁碼。
-7. 只能輸出下面四個項目，不要輸出其他說明文字。
-8. 必須完整內容輸出。
-9. Error message、Cause of error、Error correction 三個項目，不能有遺漏。
-10. 如果知識片段中同一個頁面有多個相關內容，請合併在一起回答，不要分開成多個項目。
-11. Error message 後面不顯示錯誤代碼，但要顯示錯誤訊息。
-12. 客戶問中文或英文問題時不用另外補充語言說明，直接回答就好。
-13. 客戶如果沒有問錯誤代碼，在回答時要告訴他錯誤代碼是多少、在第幾頁。
+========================
+【知識片段 metadata 規則】
+========================
+知識片段可能包含以下 metadata：
 
-知識片段：
+- source_pdf：來源 PDF
+- page：頁碼
+- section：章節名稱
+- major_title：大標題
+- minor_title：小標題
+- content_type：內容類型
+    - text
+    - table
+    - revision_record
+- table_columns：表格欄位名稱
+- version：版本號
+- date：日期
+- maintenance_person：維修人員
+- text：真正內容
+
+========================
+【回答規則】
+========================
+1. 只能使用知識片段中的內容回答。
+2. 如果知識片段沒有提供答案，請回答：
+   「資料片段未提供」。
+3. 不可自行補充機械原理、推測故障原因。
+4. 必須引用頁碼 page。
+5. 如果有章節(section / major_title / minor_title)，要一起顯示。
+6. 如果內容類型是 table：
+   - 優先整理表格內容
+   - 必須保留欄位意義
+7. 如果內容類型是 revision_record：
+   - 必須顯示版本號
+   - 必須顯示日期
+   - 必須顯示維修人員
+8. 不要輸出無關內容。
+9. 不要重複相同內容。
+10. 如果問題是查詢修改紀錄：
+   - 必須整理 revision_record
+   - 按版本號列出
+11. 如果問題是查詢功能、參數、IO、警報：
+   - 必須優先顯示對應章節
+   - 必須顯示頁碼
+12. 如果知識片段有 table_columns：
+   - 回答時要依照欄位整理
+13. 如果知識片段中有多個相關頁面：
+   - 請合併整理
+   - 不要重複
+14. 回答時不要輸出 markdown code block。
+15. 客戶問中文就用中文回答。
+16. 客戶問英文就用英文回答。
+17. 回答內容要偏工程維修手冊風格。
+18. 不要輸出「根據知識片段」。
+19. 不要輸出「以下是整理」。
+
+========================
+【知識片段】
+========================
 {context}
 
-問題：{question}
+========================
+【問題】
+========================
+{question}
 
-請固定用以下格式回答：
-1. 錯誤代碼:（如果知識片段有提供錯誤代碼就寫出來，沒有的話就寫「資料片段未提供」）
-2. Error message：
+========================
+【回答格式】
+========================
+請根據內容自動選擇適合格式：
 
-3. Cause of error：
+【一般內容】
+頁碼：
+章節：
+標題：
+內容：
 
-4. Error correction：
--
+【表格內容】
+頁碼：
+章節：
+表格欄位：
+內容：
+
+【修改紀錄】
+版本：
+日期：
+維修人員：
+內容：
+頁碼：
+
+如果知識片段沒有提供某欄位：
+請填「資料片段未提供」。
 """
 
-    response = model.generate_content(
-        prompt,
-        generation_config={
-            "temperature": 0.0,
-        }
+    response = client.models.generate_content(
+        model=model_name,
+        contents=prompt,
     )
 
     return response.text
@@ -306,7 +400,13 @@ def print_hits(picked):
     print("\n=== 最佳片段 ===")
     for i, h in enumerate(picked, start=1):
         tag = f"(rerank={h.get('_rerank', 0):.4f})" if "_rerank" in h else ""
-        body = str(h.get("text", "")).strip().replace("\n", " ")
+        body = f"""
+section={h.get('section', '')}
+major_title={h.get('major_title', '')}
+minor_title={h.get('minor_title', '')}
+content_type={h.get('content_type', '')}
+text={str(h.get('text', '')).strip().replace(chr(10), ' ')}
+"""
         print(f"\n[{i}] {tag} page={h.get('page', '')} score={h.get('_score', 0):.4f}")
         print(body[:600])
 
@@ -340,7 +440,7 @@ def run_once(
     print_hits(picked)
 
     if gen_model:
-        context = build_context(picked, text_col="text", max_chars=5000)
+        context = build_context(picked, max_chars=7000)
 
         print("\n=== CONTEXT DEBUG ===")
         print(context)
@@ -397,7 +497,7 @@ def interactive_loop(
         print_hits(picked)
 
         if gen_model:
-            context = build_context(picked, text_col="text", max_chars=5000)
+            context = build_context(picked, max_chars=7000)
 
             print("\n=== CONTEXT DEBUG ===")
             print(context)
@@ -420,7 +520,7 @@ def main():
     ap.add_argument("--qdrant-collection", default="error_codes", help="Qdrant collection 名稱")
     ap.add_argument("--question", "-q", default="", help="直接發問；留空則進入互動模式")
     ap.add_argument("--gen-model", default="gemini-2.5-flash", help="Gemini 模型名稱")
-    ap.add_argument("--gemini-api-key", default=os.getenv("GEMINI_API_KEY", ""), help="Gemini API Key")
+    ap.add_argument("--gemini-api-key", default="AIzaSyBLG-o6Ee1gSDe53XfmxMusWiDRGAQYJ0U", help="Gemini API Key")
     ap.add_argument("--top-k", type=int, default=30, help="初步檢索片段數")
     ap.add_argument("--boost", type=float, default=0.2, help="錯誤代碼命中加權值")
     ap.add_argument("--prompt", default="錯誤代碼/問題：", help="互動模式提示文字")
