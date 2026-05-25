@@ -39,7 +39,7 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "pig")
+COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "l2100_manuals")
 
 
 # =========================
