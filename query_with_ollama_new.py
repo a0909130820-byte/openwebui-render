@@ -3,6 +3,9 @@ import os
 import argparse
 import numpy as np
 import requests
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
 try:
@@ -21,8 +24,8 @@ except Exception:
 # ===============================
 # Qdrant Cloud 設定
 # ===============================
-QDRANT_URL = "https://1db6d8ba-525a-4ac3-a0db-8543aefe8461.eu-central-1-0.aws.cloud.qdrant.io:6333"
-QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6ODM2Mzk4MDUtYTVmNS00MzUyLWE2NWEtZWNlMWUxNWYxZTE3In0.SStK2mFTKzbEvbWc2r8B2s7TiXE68ETTKrPvmrkiJ7A"
+QDRANT_URL = os.getenv("QDRANT_URL", "")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 
 ERRCODE_RE = re.compile(r"[A-Za-z0-9]+-[A-Za-z0-9]+")
 
@@ -510,6 +513,133 @@ def interactive_loop(
                 print(f"(生成失敗：{e})")
 
 
+
+# =====================================================
+# FastAPI Web UI / API 包裝層
+# 注意：下面只是把原本 RAG 函式包成 Web API，不改原本 CLI 邏輯。
+# CLI 仍可用：python query_with_ollama_new.py
+# Web 可用：uvicorn query_with_ollama_new:app --host 0.0.0.0 --port 10000
+# =====================================================
+app = FastAPI(title="CNC RAG Web UI")
+
+
+class ChatRequest(BaseModel):
+    question: str
+    emb_model_name: str = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
+    qdrant_url: str = os.getenv("QDRANT_URL", QDRANT_URL)
+    qdrant_collection: str = os.getenv("COLLECTION_NAME", "error_codes")
+    gen_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    top_k: int = 30
+    boost: float = 0.2
+    rerank_model: str = "BAAI/bge-reranker-v2-m3"
+    rerank_topn: int = 10
+
+
+@app.get("/", response_class=HTMLResponse)
+def web_ui():
+    return """
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CNC RAG Web UI</title>
+  <style>
+    body { font-family: Arial, 'Microsoft JhengHei', sans-serif; background:#f5f6f8; margin:0; }
+    .wrap { max-width: 920px; margin: 40px auto; padding: 24px; background:white; border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.08); }
+    h1 { margin-top:0; font-size:26px; }
+    textarea { width:100%; min-height:110px; font-size:16px; padding:12px; box-sizing:border-box; border:1px solid #ccc; border-radius:10px; resize:vertical; }
+    button { margin-top:12px; padding:10px 18px; font-size:16px; border:0; border-radius:10px; cursor:pointer; background:#111827; color:white; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .box { margin-top:20px; padding:16px; border-radius:10px; background:#f3f4f6; white-space:pre-wrap; line-height:1.6; }
+    .err { color:#b91c1c; }
+    .small { color:#6b7280; font-size:13px; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>CNC RAG 問答系統</h1>
+    <textarea id="q" placeholder="輸入錯誤代碼或問題，例如：130-009A 的原因與處理方法？"></textarea>
+    <br />
+    <button id="btn" onclick="ask()">送出查詢</button>
+    <div class="small">API：POST /chat</div>
+    <div id="ans" class="box">等待輸入問題...</div>
+  </div>
+
+<script>
+async function ask() {
+  const q = document.getElementById('q').value.trim();
+  const ans = document.getElementById('ans');
+  const btn = document.getElementById('btn');
+  if (!q) { ans.textContent = '請先輸入問題'; return; }
+  btn.disabled = true;
+  ans.className = 'box';
+  ans.textContent = '查詢中，第一次載入模型會比較久...';
+  try {
+    const r = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: q})
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || JSON.stringify(data));
+    ans.textContent = data.answer || '沒有回答內容';
+  } catch (e) {
+    ans.className = 'box err';
+    ans.textContent = '錯誤：' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
+"""
+
+
+@app.get("/health")
+def health():
+    return {"ok": True, "message": "CNC RAG API running"}
+
+
+@app.post("/chat")
+def chat(req: ChatRequest):
+    question = req.question.strip()
+    if not question:
+        return {"question": req.question, "answer": "請輸入問題", "hits": []}
+
+    gemini_api_key = os.getenv("GEMINI_API_KEY", "")
+
+    embedder = get_embedder(req.emb_model_name)
+
+    picked = retrieve_hits(
+        question=question,
+        emb_model_name=req.emb_model_name,
+        embedder=embedder,
+        qdrant_url=req.qdrant_url,
+        qdrant_collection=req.qdrant_collection,
+        top_k=req.top_k,
+        boost=req.boost,
+        rerank_model=req.rerank_model,
+        rerank_topn=req.rerank_topn,
+    )
+
+    context = build_context(picked, max_chars=7000)
+
+    answer = generate_with_gemini(
+        question,
+        context,
+        req.gen_model,
+        gemini_api_key,
+    )
+
+    return {
+        "question": question,
+        "answer": answer,
+        "hits": picked,
+    }
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Qdrant Cloud 查詢 + 錯誤碼精準搜尋 + CrossEncoder 重排 + Gemini 回答"
@@ -520,7 +650,7 @@ def main():
     ap.add_argument("--qdrant-collection", default="error_codes", help="Qdrant collection 名稱")
     ap.add_argument("--question", "-q", default="", help="直接發問；留空則進入互動模式")
     ap.add_argument("--gen-model", default="gemini-2.5-flash", help="Gemini 模型名稱")
-    ap.add_argument("--gemini-api-key", default="AIzaSyBLG-o6Ee1gSDe53XfmxMusWiDRGAQYJ0U", help="Gemini API Key")
+    ap.add_argument("--gemini-api-key", default=os.getenv("GEMINI_API_KEY", ""), help="Gemini API Key")
     ap.add_argument("--top-k", type=int, default=30, help="初步檢索片段數")
     ap.add_argument("--boost", type=float, default=0.2, help="錯誤代碼命中加權值")
     ap.add_argument("--prompt", default="錯誤代碼/問題：", help="互動模式提示文字")
