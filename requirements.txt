@@ -6,3 +6,4 @@ sentence-transformers
 torch
 python-dotenv
 pydantic
+google-genai==1.66.0
