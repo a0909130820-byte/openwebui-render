@@ -2,7 +2,6 @@ fastapi
 uvicorn[standard]
 requests
 qdrant-client
-sentence-transformers
 python-dotenv
 pydantic
 google-genai==1.66.0
