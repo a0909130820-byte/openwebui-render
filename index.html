@@ -1,315 +1,286 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
-<title>CNC AI 助理</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L2100 車床手冊 AI 助理</title>
 
 <style>
-
-*{
-    box-sizing:border-box;
-}
-
+*{box-sizing:border-box}
 body{
     margin:0;
-    background:#0f172a;
-    color:white;
-    font-family:Arial;
+    background:#0b1120;
+    color:#e5e7eb;
+    font-family:"Microsoft JhengHei",Arial,sans-serif;
     height:100vh;
+    display:flex;
+}
+.sidebar{
+    width:280px;
+    background:#020617;
+    border-right:1px solid #1e293b;
+    padding:22px;
+}
+.logo{
+    font-size:22px;
+    font-weight:800;
+    margin-bottom:10px;
+}
+.sub{
+    color:#94a3b8;
+    font-size:14px;
+    line-height:1.6;
+    margin-bottom:22px;
+}
+.card{
+    background:#0f172a;
+    border:1px solid #1e293b;
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:12px;
+    color:#cbd5e1;
+    font-size:14px;
+}
+.card b{color:white}
+.main{
+    flex:1;
     display:flex;
     flex-direction:column;
 }
-
-.header{
+.topbar{
     padding:18px 24px;
+    border-bottom:1px solid #1e293b;
     background:#111827;
-    border-bottom:1px solid #334155;
-    font-size:24px;
+    font-size:20px;
     font-weight:bold;
 }
-
 .chat{
     flex:1;
     overflow-y:auto;
-    padding:30px 20px;
+    padding:28px;
 }
-
 .message{
-    max-width:900px;
-    margin:auto;
-    margin-bottom:24px;
-    padding:18px;
-    border-radius:16px;
+    max-width:920px;
+    margin:0 auto 22px auto;
+    padding:18px 20px;
+    border-radius:18px;
     line-height:1.8;
     white-space:pre-wrap;
     word-break:break-word;
 }
-
 .user{
     background:#2563eb;
+    color:white;
 }
-
 .bot{
     background:#1e293b;
     border:1px solid #334155;
 }
-
-.input-area{
+.quick{
+    max-width:920px;
+    margin:0 auto 20px auto;
     display:flex;
-    gap:12px;
-    padding:20px;
-    background:#111827;
-    border-top:1px solid #334155;
+    flex-wrap:wrap;
+    gap:10px;
 }
-
-input{
-    flex:1;
-    padding:16px;
-    border:none;
-    border-radius:14px;
-    font-size:16px;
-    outline:none;
+.quick button{
+    background:#0f172a;
+    border:1px solid #334155;
+    color:#cbd5e1;
+    padding:10px 14px;
+    border-radius:999px;
+    cursor:pointer;
+}
+.quick button:hover{
     background:#1e293b;
     color:white;
 }
-
-button{
+.input-area{
+    display:flex;
+    gap:12px;
+    padding:20px 28px;
+    background:#111827;
+    border-top:1px solid #1e293b;
+}
+input{
+    flex:1;
+    padding:16px 18px;
     border:none;
-    border-radius:14px;
-    padding:16px 24px;
+    border-radius:16px;
+    background:#1e293b;
+    color:white;
+    font-size:16px;
+    outline:none;
+}
+button.send{
+    border:none;
+    border-radius:16px;
+    padding:16px 26px;
     background:#22c55e;
     color:white;
-    cursor:pointer;
     font-size:16px;
     font-weight:bold;
+    cursor:pointer;
 }
-
-button:hover{
-    background:#16a34a;
-}
-
+button.send:hover{background:#16a34a}
 .result-image{
     width:100%;
-    max-width:700px;
+    max-width:760px;
+    display:block;
+    margin-top:16px;
     border-radius:14px;
     border:1px solid #475569;
-    margin-top:18px;
 }
-
 .image-title{
-    margin-top:25px;
-    margin-bottom:10px;
-    font-size:18px;
+    margin-top:22px;
     font-weight:bold;
+    color:#facc15;
 }
-
-.loading{
-    opacity:0.7;
+.badge{
+    display:inline-block;
+    background:#334155;
+    color:#cbd5e1;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:12px;
+    margin-bottom:10px;
 }
-
+.loading{opacity:.75}
+@media(max-width:800px){
+    body{display:block}
+    .sidebar{display:none}
+    .main{height:100vh}
+}
 </style>
-
 </head>
 
 <body>
 
-<div class="header">
-🔧 CNC AI 助理
+<div class="sidebar">
+    <div class="logo">🔧 L2100 Manual AI</div>
+    <div class="sub">
+        只回答三本 L2100 車床手冊內的內容。<br>
+        適合查詢 G/M 指令、維護流程、參數、警報與圖片說明。
+    </div>
+
+    <div class="card"><b>程式說明手冊</b><br>G 碼、M 碼、Macro、加工指令</div>
+    <div class="card"><b>中文維護手冊</b><br>軟體維護、硬體架構、I/O、故障排除</div>
+    <div class="card"><b>參數警報手冊</b><br>系統參數、警報、驅動器、通訊設定</div>
 </div>
 
-<div
-    class="chat"
-    id="chat"
->
+<div class="main">
+
+<div class="topbar">
+    L2100 車床手冊 AI 助理
+</div>
+
+<div class="chat" id="chat">
 
 <div class="message bot">
+<span class="badge">三本手冊限定回答</span>
+你好，我是 L2100 車床手冊 AI 助理。
 
-你好，我是 CNC AI 助理。
+你可以問：
+・G02 是什麼？
+・G04 怎麼用？
+・M03 是什麼功能？
+・參數 0002 是什麼？
+・MOT 警報怎麼排除？
+・EtherCAT 版本要注意什麼？
+</div>
 
-你可以直接輸入：
-
-231-E018
-
-或：
-
-G02 是什麼？
-
+<div class="quick">
+    <button onclick="askQuick('G02 是什麼？')">G02 是什麼？</button>
+    <button onclick="askQuick('G04 暫停指令怎麼用？')">G04 暫停</button>
+    <button onclick="askQuick('參數 0002 是什麼？')">參數 0002</button>
+    <button onclick="askQuick('EtherCAT 版本要注意什麼？')">EtherCAT</button>
+    <button onclick="askQuick('M03 是什麼功能？')">M03 功能</button>
 </div>
 
 </div>
 
 <div class="input-area">
-
-<input
-    id="query"
-    placeholder="輸入錯誤代碼或問題..."
-    onkeydown="handleKey(event)"
->
-
-<button onclick="sendMessage()">
-送出
-</button>
+    <input id="query" placeholder="輸入 L2100 手冊問題，例如：G02 是什麼？" onkeydown="handleKey(event)">
+    <button class="send" onclick="sendMessage()">送出</button>
+</div>
 
 </div>
 
 <script>
-
 const API_URL = "/search";
 
 function addMessage(text,type){
-
     const chat=document.getElementById("chat");
-
     const div=document.createElement("div");
-
     div.className="message "+type;
-
     div.innerHTML=text;
-
     chat.appendChild(div);
-
     chat.scrollTop=chat.scrollHeight;
-
     return div;
 }
 
 function handleKey(event){
-
     if(event.key==="Enter"){
-
         sendMessage();
     }
 }
 
+function askQuick(text){
+    document.getElementById("query").value=text;
+    sendMessage();
+}
+
 async function sendMessage(){
-
     const input=document.getElementById("query");
-
     const q=input.value.trim();
-
     if(!q)return;
 
     addMessage(q,"user");
-
     input.value="";
 
-    const loading=addMessage(
-        "🔍 AI 搜尋中...",
-        "bot loading"
-    );
+    const loading=addMessage("🔍 正在查詢三本 L2100 手冊...","bot loading");
 
     try{
-
-        const controller=new AbortController();
-
-        const timeout=setTimeout(()=>{
-
-            controller.abort();
-
-        },30000);
-
         const res=await fetch(API_URL,{
-
             method:"POST",
-
-            headers:{
-                "Content-Type":"application/json"
-            },
-
+            headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
-                query:q
-            }),
-
-            signal:controller.signal
+                query:q,
+                use_ollama:true
+            })
         });
 
-        clearTimeout(timeout);
-
         if(!res.ok){
-
-            loading.innerHTML=
-            `API錯誤：${res.status}`;
-
+            loading.innerHTML=`API 錯誤：${res.status}`;
             return;
         }
 
         const data=await res.json();
 
-        console.log(data);
-
-        if(data.error){
-
-            loading.innerHTML=
-            `系統錯誤：<br>${data.error}`;
-
-            return;
-        }
-
         if(data.count===0){
-
-            loading.innerHTML=
-            "查無相關資料";
-
+            loading.innerHTML="查無相關資料。請改用更明確的手冊關鍵字，例如 G02、M03、參數 0002、MOT 警報。";
             return;
         }
 
         let html="";
-
-        html+=`
-        <div>
-        ${data.answer}
-        </div>
-        `;
+        html+=`<span class="badge">查到 ${data.count} 筆手冊資料</span>`;
+        html+=`<div>${data.answer}</div>`;
 
         if(data.images && data.images.length>0){
-
-            html+=`
-            <div class="image-title">
-            相關圖片：
-            </div>
-            `;
-
+            html+=`<div class="image-title">相關手冊圖片：</div>`;
             for(const img of data.images){
-
-                html+=`
-                <img
-                    src="${img}"
-                    class="result-image"
-                    loading="lazy"
-                >
-                `;
+                html+=`<img src="${img}" class="result-image" loading="lazy">`;
             }
         }
 
         loading.classList.remove("loading");
-
         loading.innerHTML=html;
 
     }catch(err){
-
         console.error(err);
-
-        if(err.name==="AbortError"){
-
-            loading.innerHTML=
-            "請求超時（Render 免費版可能正在喚醒）";
-
-        }else{
-
-            loading.innerHTML=
-            "API連線失敗";
-        }
+        loading.innerHTML="API 連線失敗，請確認 Render 是否已 Live。";
     }
 }
-
 </script>
 
 </body>
