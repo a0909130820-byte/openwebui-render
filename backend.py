@@ -21,9 +21,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# =========================
-# static 圖片資料夾
-# =========================
 if os.path.exists("static"):
     app.mount(
         "/static",
@@ -32,21 +29,13 @@ if os.path.exists("static"):
     )
 
 
-# =========================
-# 環境變數
-# =========================
 QDRANT_URL = os.getenv("QDRANT_URL", "")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-
-# Render Environment 建議設定：
-# QDRANT_COLLECTION=l2100_manuals
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "l2100_manuals")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 
-# =========================
-# Qdrant
-# =========================
 qdrant = QdrantClient(
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY,
@@ -56,26 +45,16 @@ qdrant = QdrantClient(
 )
 
 
-# =========================
-# Gemini
-# =========================
 gemini_client = None
-
 if GEMINI_API_KEY:
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
 
-# =========================
-# Request Model
-# =========================
 class QueryRequest(BaseModel):
     query: str
     use_ollama: bool = True
 
 
-# =========================
-# API 首頁
-# =========================
 @app.get("/")
 def home():
     return {
@@ -85,20 +64,15 @@ def home():
         "qdrant_url_set": bool(QDRANT_URL),
         "qdrant_api_key_set": bool(QDRANT_API_KEY),
         "gemini_api_key_set": bool(GEMINI_API_KEY),
+        "gemini_model": GEMINI_MODEL,
     }
 
 
-# =========================
-# GPT風格前端 UI
-# =========================
 @app.get("/ui")
 def ui():
     return FileResponse("index.html")
 
 
-# =========================
-# 健康檢查：確認 Qdrant 是否連線
-# =========================
 @app.get("/health/qdrant")
 def qdrant_health():
     try:
@@ -117,55 +91,122 @@ def qdrant_health():
         }
 
 
-# =========================
-# 建立 context
-# =========================
 def build_context(results: List[dict]) -> str:
     context = ""
 
     for i, r in enumerate(results, 1):
-        codes = r.get("codes", [])
+        metadata = r.get("metadata", {}) or {}
+        original_metadata = r.get("original_metadata", {}) or {}
+
+        codes = (
+            r.get("codes")
+            or metadata.get("codes")
+            or original_metadata.get("codes")
+            or []
+        )
+
         if isinstance(codes, list):
             codes_text = "、".join([str(c) for c in codes])
         else:
             codes_text = str(codes)
 
+        source_file = (
+            r.get("source_file")
+            or r.get("source_pdf")
+            or metadata.get("source_pdf")
+            or original_metadata.get("source_pdf")
+            or ""
+        )
+
+        page = (
+            r.get("page")
+            or metadata.get("page")
+            or original_metadata.get("page")
+            or ""
+        )
+
+        title = (
+            r.get("title")
+            or r.get("major_title")
+            or metadata.get("major_title")
+            or original_metadata.get("major_title")
+            or ""
+        )
+
+        section = (
+            r.get("section")
+            or metadata.get("section")
+            or original_metadata.get("section")
+            or ""
+        )
+
+        text = str(r.get("text", "")).strip()
+
         context += f"""
 【資料 {i}】
 
 來源：
-{r.get("source_file", r.get("source_pdf", ""))}
+{source_file}
 
 頁碼：
-{r.get("page", "")}
+{page}
 
 標題：
-{r.get("title", r.get("major_title", ""))}
+{title}
 
 章節：
-{r.get("section", "")}
+{section}
 
 代碼：
 {codes_text}
 
-錯誤代碼：
-{r.get("error_code", "")}
-
 內容：
-{str(r.get("text", ""))[:2500]}
+{text[:2500]}
 """
 
     return context
 
 
-# =========================
-# Gemini 回答
-# =========================
+def collect_images(results: List[dict]) -> List[str]:
+    all_images = []
+
+    for payload in results:
+        metadata = payload.get("metadata", {}) or {}
+        original_metadata = payload.get("original_metadata", {}) or {}
+
+        image_sources = [
+            payload.get("images", []),
+            metadata.get("images", []),
+            original_metadata.get("images", []),
+        ]
+
+        for imgs in image_sources:
+            if not imgs:
+                continue
+
+            if isinstance(imgs, str):
+                imgs = [imgs]
+
+            for img in imgs:
+                if not img:
+                    continue
+
+                img = str(img).strip()
+
+                if not img.startswith("/static/") and not img.startswith("http"):
+                    img = "/static/images/" + img.lstrip("/")
+
+                if img not in all_images:
+                    all_images.append(img)
+
+    return all_images
+
+
 def generate_answer(query: str, results: List[dict]) -> str:
     context = build_context(results)
 
     if not gemini_client:
-        return context[:3000]
+        return "查到手冊資料，但未設定 Gemini API Key。\n\n" + context[:3000]
 
     prompt = f"""
 你是 CNC L2100 車床技術手冊 AI 助理。
@@ -200,18 +241,13 @@ def generate_answer(query: str, results: List[dict]) -> str:
 """
 
     response = gemini_client.models.generate_content(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        model=GEMINI_MODEL,
         contents=prompt
     )
 
     return response.text
 
 
-# =========================
-# 關鍵字搜尋
-# 重點：不限定 payload 欄位，整個 payload 都拿來比對
-# 這樣 codes / error_code / text / title / page 都能搜尋
-# =========================
 def keyword_search(query: str, limit: int = 5):
     results = []
     offset = None
@@ -232,8 +268,12 @@ def keyword_search(query: str, limit: int = 5):
         for p in points:
             payload = p.payload or {}
 
-            # 直接搜尋整個 payload，避免欄位名稱不同造成查不到
-            search_text = str(payload).lower()
+            search_text = (
+                str(payload)
+                .lower()
+                .replace("\\n", " ")
+                .replace("\n", " ")
+            )
 
             if q in search_text:
                 results.append(payload)
@@ -247,9 +287,6 @@ def keyword_search(query: str, limit: int = 5):
     return results
 
 
-# =========================
-# 搜尋 API
-# =========================
 @app.post("/search")
 def search(req: QueryRequest):
     query = req.query.strip()
@@ -260,6 +297,8 @@ def search(req: QueryRequest):
             limit=5
         )
 
+        images = collect_images(results)
+
         if not results:
             return {
                 "query": query,
@@ -267,24 +306,21 @@ def search(req: QueryRequest):
                 "count": 0,
                 "answer": "查無相關資料，請換一個關鍵字。",
                 "results": [],
-                "images": []
+                "images": images
             }
 
-        images = []
-
-        for payload in results:
-            for img in payload.get("images", []):
-                if img not in images:
-                    images.append(img)
-
         try:
-            answer = generate_answer(
-                query,
-                results
-            )
+            answer = generate_answer(query, results)
+            answer = f"查到 {len(results)} 筆手冊資料\n\n" + answer
 
         except Exception as gemini_error:
-            answer = f"Gemini 生成失敗：{gemini_error}"
+            fallback_context = build_context(results)
+            answer = (
+                f"查到 {len(results)} 筆手冊資料\n\n"
+                f"Gemini 生成失敗：{gemini_error}\n\n"
+                f"以下先顯示檢索到的原始資料：\n\n"
+                f"{fallback_context[:4000]}"
+            )
 
         return {
             "query": query,
