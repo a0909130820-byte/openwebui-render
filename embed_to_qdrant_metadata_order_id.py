@@ -2,6 +2,7 @@
 import json
 import time
 import uuid
+import os
 from typing import List, Dict, Any
 
 import numpy as np
@@ -13,8 +14,8 @@ from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSch
 # ===============================
 # Qdrant Cloud 設定
 # ===============================
-QDRANT_URL = "https://1db6d8ba-525a-4ac3-a0db-8543aefe8461.eu-central-1-0.aws.cloud.qdrant.io:6333"
-QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6ODM2Mzk4MDUtYTVmNS00MzUyLWE2NWEtZWNlMWUxNWYxZTE3In0.SStK2mFTKzbEvbWc2r8B2s7TiXE68ETTKrPvmrkiJ7A"
+QDRANT_URL = os.getenv("QDRANT_URL", "")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 
 
 def chunk_list(lst, batch_size):
@@ -324,7 +325,9 @@ def write_to_qdrant_cloud(
         if not isinstance(table_columns, list):
             table_columns = [str(table_columns)]
 
-        point_id = int(row.get("id", i))
+        # 使用 UUID 當 Point ID，避免相同 id 覆蓋舊資料
+        # 只要 embedding_text 或 metadata 不同，就會產生不同 UUID
+        point_id = make_point_id(row, embedding_texts[i])
 
         points.append(
             PointStruct(
