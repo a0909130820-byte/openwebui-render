@@ -2,17 +2,26 @@ import fitz
 import os
 import json
 import re
-from pathlib import Path
 
 # ===============================
 # 設定
 # ===============================
 PDF_PATH = "L2100 車床程式說明手冊.pdf"
 OUTPUT_JSON = "data/l2100_programming_metadata.json"
-IMAGE_DIR = "static/images"
+IMAGE_MAP_PATH = "image_map.json"
 
 os.makedirs("data", exist_ok=True)
-os.makedirs(IMAGE_DIR, exist_ok=True)
+
+
+# ===============================
+# 讀取 image_map.json
+# 這支程式不重新抽圖片，只保留圖片 metadata
+# ===============================
+if os.path.exists(IMAGE_MAP_PATH):
+    with open(IMAGE_MAP_PATH, "r", encoding="utf-8") as f:
+        IMAGE_MAP = json.load(f)
+else:
+    IMAGE_MAP = {}
 
 
 # ===============================
@@ -42,8 +51,34 @@ def detect_codes(text: str):
     for p in patterns:
         codes.extend(re.findall(p, text, flags=re.IGNORECASE))
 
-    # 保留順序並去重
     return list(dict.fromkeys(codes))
+
+
+# ===============================
+# 從 image_map.json 取得該頁圖片
+# 支援兩種格式：
+# 1. {"5": ["xxx.png"]}
+# 2. {"5": ["/static/images/xxx.png"]}
+# ===============================
+def get_images_for_page(page_no: int):
+    page_key = str(page_no)
+    images = []
+
+    if page_key not in IMAGE_MAP:
+        return images
+
+    for item in IMAGE_MAP[page_key]:
+        img = str(item).strip()
+
+        if not img:
+            continue
+
+        if img.startswith("/static/") or img.startswith("http"):
+            images.append(img)
+        else:
+            images.append(f"/static/images/{img}")
+
+    return images
 
 
 # ===============================
@@ -52,7 +87,6 @@ def detect_codes(text: str):
 def parse_toc(doc):
     toc_text = ""
 
-    # 程式說明手冊目錄在前兩頁
     for i in range(min(2, len(doc))):
         toc_text += "\n" + doc[i].get_text("text")
 
@@ -86,7 +120,6 @@ def parse_toc(doc):
 
 
 def get_major_title(page_no: int, text: str) -> str:
-    # 依照手冊結構粗分大章節
     if page_no <= 111:
         return "一、G 碼指令"
     elif page_no <= 118:
@@ -118,42 +151,6 @@ def detect_content_type(text: str, minor_title: str) -> str:
 
 
 # ===============================
-# 抽圖片
-# 每一頁圖片都存到 static/images
-# JSON 裡存 /static/images/xxx.png
-# ===============================
-def extract_images_for_page(doc, page_index: int, source_stem: str):
-    page = doc[page_index]
-    page_no = page_index + 1
-    image_paths = []
-
-    images = page.get_images(full=True)
-
-    for img_index, img in enumerate(images, start=1):
-        xref = img[0]
-
-        try:
-            pix = fitz.Pixmap(doc, xref)
-
-            # CMYK 或特殊色彩空間轉 RGB
-            if pix.n >= 5:
-                pix = fitz.Pixmap(fitz.csRGB, pix)
-
-            filename = f"{source_stem}_p{page_no}_{img_index}.png"
-            save_path = os.path.join(IMAGE_DIR, filename)
-
-            pix.save(save_path)
-            pix = None
-
-            image_paths.append(f"/static/images/{filename}")
-
-        except Exception as e:
-            print(f"圖片抽取失敗 page={page_no}, image={img_index}: {e}")
-
-    return image_paths
-
-
-# ===============================
 # 主流程
 # ===============================
 def main():
@@ -162,7 +159,6 @@ def main():
 
     doc = fitz.open(PDF_PATH)
     source_file = os.path.basename(PDF_PATH)
-    source_stem = Path(PDF_PATH).stem.replace(" ", "_")
 
     toc_items = parse_toc(doc)
 
@@ -173,6 +169,7 @@ def main():
         page_no = page_index + 1
         page = doc[page_index]
 
+        # 只抽文字，不抽圖片
         text = clean_text(page.get_text("text"))
 
         if not text:
@@ -184,11 +181,8 @@ def main():
         content_type = detect_content_type(text, minor_title)
         codes = detect_codes(text)
 
-        images = extract_images_for_page(
-            doc=doc,
-            page_index=page_index,
-            source_stem=source_stem
-        )
+        # 圖片只從 image_map.json 讀取，不重新抽圖
+        images = get_images_for_page(page_no)
 
         metadata = {
             "page": page_no,
@@ -220,6 +214,7 @@ def main():
     print("\n=== 完成 ===")
     print(f"輸出 JSON：{OUTPUT_JSON}")
     print(f"總筆數：{len(records)}")
+    print("注意：本程式只抽文字，圖片 metadata 來自 image_map.json")
 
 
 if __name__ == "__main__":
