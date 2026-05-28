@@ -282,7 +282,9 @@
         "EtherCAT",
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p13_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n13\n1.2. EtherCAT 版本說明 \n1. 確認操作面板的形式，以免進入系統無法操作，目前外面Ladder 版本有下\n列 \n(a)、 ITRI 車床操作面板 \n(b)、 遠瞻凱巨車床獨立版 \n(c)、 遠瞻車床標準出機版 \n(d)、 遠瞻銑床版 \n(e)、 台中精機獨立版 \n(f)、 奕達單雙主軸版 \n(g)、 交大東台精機版 \n(h)、 遠瞻奕達單雙主軸版 \n \n2. 確認ITRI 通訊卡、伺服驅動器、IO 卡等是否有燒入韌體(以JPS 為例)，如\n沒有請至TwinCAT System Manage 中，把網路線插入第一個slave，scan\n到該JPS 裝置，接著點選該JPS 裝置。 \n路徑為EtherCAT  Advanced Settings  ESC Access  E2PROM  \nSmartView，點選Write EEPROM，選擇JPS(AURORA)，按OK 即可。 \n \n3. 確認D:\\L2100_1\\MACHINE\\ EtherCATConfig.ini 之參數設定，如下圖所示"
   },
@@ -394,7 +396,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p19_2.jpeg"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n19\n2. 硬體架構 \n2.1. GMC 硬體架構 \nGMC700 系統架構 \n下圖為GMC700 硬體系統架構,包含GMC700 運動控制卡,GMC 轉接板,兩\n組Slave I/O 卡.GMC700 運動控制卡主要安裝於電腦主機內,透過GMC API 函式\n庫來與軸卡進行溝通.GMC 轉接板主要連接至馬達驅動器,也可以透過內建的\nI/O,A/D,D/A 與編碼器來進行相關的應用.但GMC 轉接板內部僅提供4 個輸入接\n點(Input)及4 個輸出接點(Output),若需要更多的I/O 接點應用時,則需要額外搭配\nSlave I/O 擴充卡.目前整體GMC700 架構最大可以支援到6 張Slave I/O 擴充卡,\n每一張Slave I/O 擴充卡可能提供64 個輸入接點及64 個輸出接點."
   },
@@ -430,7 +434,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p21_2.jpeg"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n21\nGMC800 系統架構 \n下圖為GMC800 硬體系統架構,包含GMC800 運動控制卡,GMC 轉接板,兩\n組Slave I/O 卡.GMC800 運動控制卡主要安裝於電腦主機內,透過GMC API 函式\n庫來與軸卡進行溝通.GMC800 主要透過Panasonic RTEX 通訊協定來與\nPanasonic A4N/A5N 伺服系統整合,也可以透過內建的A/D 與編碼器來進行相關\n的應用.但若需要I/O 接點應用時,則需要額外搭配Slave I/O 擴充卡.目前整體\nGMC800 架構最大可以支援到6 張Slave I/O 擴充卡,每一張Slave I/O 擴充卡可\n能提供64 個輸入接點及64 個輸出接點."
   },
@@ -467,7 +473,9 @@
         "Ethercat",
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p23_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n23\n2.2. Ethercat 硬體架構 \n下圖為Ethercat 硬體系統架構,包含控制器,EIO4832 I/O 卡.控制系統主要透\n過Ethercat通訊協定來與伺服系統整合,也可以與EIO4832I/O卡整合來應用, \n但若需要追加I/O 接點應用時,僅需增加EIO4832.每一張EIO4832 I/O 卡可\n能提供48 個輸入接點及32 個輸出接點, 並提供一組MPG 功能及VR 功能"
   },
@@ -485,7 +493,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p24_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n24\n2.3. 控制軸卡 \nGMC700 介面說明 \n \n下圖為GMC700 控制軸卡,請先確認SW1 保持皆在OFF 的狀態,CN6,CN9 與\nCN10 的Jumper 請保持開路已確保GMC700 控制軸卡正常運作. \n \n \n名稱 \n功能說明 \nCN1 \n1-4 軸控制訊號連接埠 \nCN2 \n第一組Slave I/O 擴充卡連接埠 \nCN3 \n第二組Slave I/O 擴充卡連接埠 \nCN4 \n5-6 軸控制訊號連接埠"
   },
@@ -557,7 +567,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p28_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n28\nGMC800 介面說明(使用PANASONIC 全數位伺服) \n \n下圖為GMC800 控制軸卡,請先確認SW1 保持皆在OFF 的狀態,CN7,CN13 與\nCN14 的Jumper 請保持開路已確保GMC800 控制軸卡正常運作. \n \n \n名稱 \n功能說明 \nCN1 \n泛用伺服控制訊號連接埠 \nCN2 \n第一組Slave I/O 擴充卡連接埠 \nCN3 \n第二組Slave I/O 擴充卡連接埠 \nCN10 \n硬體訊號控制訊號連接埠 \nCN11 \nPanasonic RTEX 通訊連接埠"
   },
@@ -611,7 +623,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p31_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n31\n2.4. Slave I/O \n2.4.1. Slave I/O 介面說明 \n \n \n \n名稱 \n功能說明 \nCN1 \nRemote I/O 控制連接埠 \nJP1 \n+24V 直流電源輸入 \nS2 \nSlave I/O Base Address 設定開關 \nJ1 \n第一群組I/O 接點連接埠 \nJ2 \n第二群組I/O 接點連接埠 \nJ3 \n第三群組I/O 接點連接埠 \nJ4 \n第四群組I/O 接點連接埠 \n \n \n \n在輸出入卡上提供輸出訊號方式為汲出( Source) 型，輸出工作電壓為\n24V 每點的推動能力最高為100mA。在輸入訊號方面的判斷，準位為High(1) \n的判斷為20 ~ 28V，準位為Low(0) 的判斷為0 ~ 4V，輸入電流為10mA。"
   },
@@ -647,7 +661,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p33_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n33\nSLAVE1 J1~J4: I/O 接點連接埠"
   },
@@ -665,7 +681,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p34_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n34\nSLAVE2 J1~J4: I/O 接點連接埠"
   },
@@ -684,7 +702,9 @@
         "Ethercat",
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p35_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n35\n2.4.2. EIO4832 I/O 介面說明 \n \n \n名稱 \n功能說明 \nXP1 \nEthercat 網路輸入連接埠 \nXP2 \nEthercat 網路輸出連接埠 \nXP3 \nMPG 連接埠 \nXP4 \n第一群組I/O 接點連接埠 \nXP5 \n第二群組I/O 接點連接埠 \nJP1 \n可變電阻連接埠 \nJP2 \n+24V 直流電源輸入 \nJ1 \n輸入端數位濾波設定 \n \n在輸出入卡上提供輸出訊號方式為汲出( Source) 型，輸出工作電壓為\n24V 每點的推動能力最高為100mA。在輸入訊號方面的判斷，準位為High(1) \n的判斷為15 ~ 28V，準位為Low(0) 的判斷為0 ~ 5V，輸入電流為4mA。"
   },
@@ -721,7 +741,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p37_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n37\nXP3: MPG 連接埠 \n MPG 信號僅接受DC5V 信號, 不接受其他不同電壓準位 . \n \n5V\nP1\nCONNECTOR-DB9/F\n5\n9\n4\n8\n3\n7\n2\n6\n1\n/PB\nPB\n/PA\nPA\n \n \n此為差動信號接法, 若使用單一信號接法, 請將/PA, /PB 接地, 但信號長度最好 \n不要超過30 公分. \n \n 差動MPG 接法 \nPin \n標記 \n說明 \n1 \nPA \n脈衝 A 相 \n2 \nPB \n脈衝 B 相 \n3 \nNC \nNo Connect \n4 \n +5V \nDC 5V \n5 \nPE \n外殼地 \n6 \n/PA \n反相脈衝 A 相 \n7 \n/PB \n反相脈衝 B 相 \n8 \nNC \nNo Connect \n9 \nGND \nDC5V 地 \n \n 單一信號MPG 接法 \nPin \n標記 \n說明 \n1 \nPA \n脈衝 A 相 \n2 \nPB \n脈衝 B 相 \n3 \nNC \nNo Connect \n4 \n +5V \nDC 5V \n5 \nPE \n外殼地 \n6 \n/PA \nDC5V 地 \n7 \n/PB \nDC5V 地 \n8 \nNC \nNo Connect \n9 \nGND \nDC5V 地 \n \n若使用單一信號MPG, 建議不要超過30 公分."
   },
@@ -739,7 +761,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p38_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n38\nXP4: 第一群組I/O 接點連接埠 \n \nOUTP7\nINP0\nOUTP9\nOUTP11\nOUTP13\nOUTP15\nINP2\nDOCOM\nINP4\nINP6\nINP8\nINP10\nDOCOM\nINP12\nDOCOM\nINP14\nINP16\nINP18\nINP20\nINP22\nDOCOM\nINP1\nINP3\nINP5\nINP7\nINP9\nINP11\nOUTP1\nOUTP7\nOUTP5\nOUTP3\nOUTP11\nOUTP9\nOUTP15\nOUTP13\nOUTP0\nINP13\nINP15\nDOCOM\nINP17\nINP19\nINP21\nDOCOM\nDOCOM\nINP23\nINP0\nINP1\nINP7\nINP5\nINP3\nINP11\nINP9\nINP17\nINP15\nINP13\nINP23\nINP21\nINP19\nINP2\nINP8\nINP6\nINP4\nINP12\nINP10\nINP16\nINP14\nINP22\nINP20\nINP18\nDOCOM\nCNC\nOUTP14\nOUTP8\nOUTP10\nOUTP12\nOUTP2\nOUTP4\nOUTP6\nOUTP0\nOUTP2\nOUTP4\n+24V\nOUTP6\nOUTP8\nOUTP10\nOUTP12\nOUTP14\nXP4\nCON50A\n1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n21\n23\n25\n27\n29\n31\n33\n35\n37\n39\n41\n43\n45\n47\n49\n2\n4\n6\n8\n10\n12\n14\n16\n18\n20\n22\n24\n26\n28\n30\n32\n34\n36\n38\n40\n42\n44\n46\n48\n50\nOUTP1\nOUTP3\nOUTP5\n \nDOCOM : 接外部DC24V \n \nXP5: 第二群組I/O 接點連接埠 \n \nINP36\nINP34\nINP40\nINP38\nINP42\nINP33\nINP35\nINP37\nINP39\nINP46\nINP44\nINP41\nINP43\nINP45\nINP47\nCNC\nOUTP23\nOUTP27\nOUTP25\nINP24\nDOCOM\nINP26\nOUTP31\nOUTP29\nINP32\nINP30\nINP28\nDOCOM\nINP36\nINP34\nINP42\nINP40\nINP38\nDOCOM\nINP25\nDOCOM\nINP46\nINP44\nINP31\nINP29\nINP27\nOUTP19\nOUTP17\nOUTP25\nOUTP23\nOUTP21\nOUTP31\nOUTP29\nOUTP27\nOUTP16\nDOCOM\nDOCOM\nDOCOM\nINP27\nINP25\nINP24\nINP31\nINP29\nINP39\nINP37\nINP35\nINP45\nINP43\nINP41\nINP33\nINP47\nINP30\nINP28\nINP26\nINP32\nOUTP30\nDOCOM\nOUTP24\nOUTP26\nOUTP28\nOUTP18\nOUTP20\nOUTP22\nOUTP18\nOUTP16\n+24V\nOUTP20\nOUTP28\nOUTP26\nOUTP24\nOUTP22\nOUTP30\nXP5\nCON50A\n1\n3\n5\n7\n9\n11\n13\n15\n17\n19\n21\n23\n25\n27\n29\n31\n33\n35\n37\n39\n41\n43\n45\n47\n49\n2\n4\n6\n8\n10\n12\n14\n16\n18\n20\n22\n24\n26\n28\n30\n32\n34\n36\n38\n40\n42\n44\n46\n48\n50\nOUTP17\nOUTP21\nOUTP19\n \nDOCOM : 接外部DC24V"
   },
@@ -775,7 +799,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p40_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n40\n2.4.3. EIO4832 LED 燈號說明 \nLayout"
   },
@@ -793,7 +819,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p41_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n41\n實體"
   },
@@ -830,7 +858,10 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p43_2.png",
+        "/static/images/L2100_maintenance_p43_3.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n43\n2.5. 機構尺寸 \n \n \n \n \n \nLCD 外觀尺寸 \n \nLCD 開孔尺寸"
   },
@@ -848,7 +879,10 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p44_2.png",
+        "/static/images/L2100_maintenance_p44_3.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n44\n \nOPERATION PANEL 外觀尺寸 \n \n \nOPERATION PANE 開孔尺寸"
   },
@@ -866,7 +900,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p45_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n45\n \n控制器裝置外觀尺寸"
   },
@@ -884,7 +920,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p46_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n46\n \n \n大轉接板(1~3 軸)外觀尺寸 \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n小轉接板(4~5 軸)外觀尺寸"
   },
@@ -902,7 +940,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p47_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n47\n \n \nSLAVE I/O 卡外觀尺寸"
   },
@@ -7370,7 +7410,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p256_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n256 \n3.7.2. 操作面板位置圖"
   },
@@ -7388,7 +7430,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p257_2.jpeg"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n257 \n3.7.3. 操作面板線路圖"
   },
@@ -7406,7 +7450,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p258_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n258"
   },
@@ -7444,7 +7490,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p260_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n260 \n3.8.2. 轉接板零件位置圖"
   },
@@ -7462,7 +7510,10 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p261_2.png",
+        "/static/images/L2100_maintenance_p261_3.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n261 \n3.8.3. 轉接板線路圖 \n大轉接板"
   },
@@ -7480,7 +7531,10 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p262_2.png",
+        "/static/images/L2100_maintenance_p262_3.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n262"
   },
@@ -7498,7 +7552,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p263_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n263"
   },
@@ -7516,7 +7572,10 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p264_2.png",
+        "/static/images/L2100_maintenance_p264_3.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n264 \n小轉接板"
   },
@@ -7534,7 +7593,9 @@
       "codes": [
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p265_2.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n265"
   },
@@ -7571,7 +7632,10 @@
         "EtherCAT",
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p267_2.png",
+        "/static/images/L2100_maintenance_p267_3.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n267 \n \n \n003 \n驅動器設定 \n \nPanasonic A5N 及A5B 絕對式設定，當裝上電池後，會發生警報40.0(絕\n對式系統停機異常保護)，即使使用Panaterm 調機軟體裡面的Alarm 的\nClear 也清除不掉警報 \n 回覆： \n (1):使用Panaterm 調機軟體進入Monitor 裡面的Mul-turn CL 清除多圈 \n 值，儘管照警報40.0 的解釋是說內置電容器電壓低於規定值，但實際 \n 是需要清除多圈值，如下所示。 \n \n (2):使用GMC800 版本可以設定參數881(*絕對式編碼器功能)，設定絕對 \n 式軸向，如兩軸為X 與Z，分別是Bit 0(十進位數值為1)與Bit 2(十進 \n 位數值為4)，則參數881 則設為5，MENU參數診斷2絕對式原 \n 點，如下圖所示，先完成步驟1 清除多圈數值警報，再進行步驟2 把 \n 當下位置設為原點，EtherCAT 版本目前無法使用。 \n 參考參數：881 ~ 888"
   },
@@ -7590,7 +7654,10 @@
         "EtherCAT",
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p268_2.jpeg",
+        "/static/images/L2100_maintenance_p268_3.png"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n268 \n \n \n004 \nEtherCAT 連線問題 \n \n當Console window 出現Working Counter ‘6’ read and ‘7’ \nexpected，如下圖所示 \n 回覆： \n (1):檢查各軸向網路線是否有插好。 \n (2):檢查各軸向網路線的in 與out 是否插對。 \n (3):檢查各軸向的初始化參數是否有設定，如JPS 驅動器須把 \n Pr460 設為1 才能完成EtherCAT 連線。 \n (4):檢查JPS 或TDE 的通訊卡是否有故障導致無法連線。 \n 參考參數：JPS Pr460 \n \n \n005 \n軸向無法移動 \n \n當配機初期，伺服軸向MPG 模式、JOG 模式無法移動 \n 回覆： \n (1):請先檢查控制器是否有發警報(Alarm)或警告(Warning)。 \n (2):請檢查伺服與主軸驅動器的顯示幕是否有發警報，某些警告不會秀 \n 在驅動器顯示幕上，需要使用調機軟體才知道問題。 \n (3):請先確認軸向號碼是否設定正確，MCS 參數24~27(X、Y、Z、CH4)、 \n 29(第一主軸)，請根據串接的順序設置，軸向請設定25X，主軸請設"
   },
@@ -7609,7 +7676,9 @@
         "G0",
         "2100"
       ],
-      "images": []
+      "images": [
+        "/static/images/L2100_maintenance_p269_2.jpeg"
+      ]
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n269 \n 定20X，其中的X 為串接順序。 \n (4):確認控制器的參數診斷1  MLC 頁面的S533 是否開啟。 \n (5):確認參數診斷1  MLC 頁面FEEDHOLD 的C001 有被解除。 \n (6):確認MCS 參數194(設定控制器Interlock 功能的選項)的數值是否為 \n 19，該數值表示不啟動Interlock 功能。 \n (7):MPG 手輪無法移動時，請檢查C16~19(X、Y、Z、CH4)、C502~503 \n(CH5、CH6)是否有啟動，暫存器R14 是否有數值，1 表示*1，2 表示\n*10、3 表示*100。 \n (8):JOG 模式無法移動時，請檢查C6~13、C31~34 是否有啟動，暫存器\nR17 是否有數值，1~15 表示0%~150%。 \n (9):執行G0 無法移動，可能是MCS 參數77 造成的，該參數設0 時，表\n示系統要回原點，G0 才能移動。 \n \n006 \n軸向驅動器問題 \n \n馬達運轉過程中，Panasonic 馬達發出喀搭咖搭聲 \n 回覆: \n 以下是Panasonic 原廠回覆 \n \n \n007 \n系統設定 \n \nD:\\L2100_1\\MACHINE\\ EtherCATConfig.ini \n 回覆: \n16.07.11.254 之後的核心版本，增加熱溫升卡"
   },
