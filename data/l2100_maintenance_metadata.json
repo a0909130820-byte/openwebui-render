@@ -282,9 +282,7 @@
         "EtherCAT",
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p13_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n13\n1.2. EtherCAT 版本說明 \n1. 確認操作面板的形式，以免進入系統無法操作，目前外面Ladder 版本有下\n列 \n(a)、 ITRI 車床操作面板 \n(b)、 遠瞻凱巨車床獨立版 \n(c)、 遠瞻車床標準出機版 \n(d)、 遠瞻銑床版 \n(e)、 台中精機獨立版 \n(f)、 奕達單雙主軸版 \n(g)、 交大東台精機版 \n(h)、 遠瞻奕達單雙主軸版 \n \n2. 確認ITRI 通訊卡、伺服驅動器、IO 卡等是否有燒入韌體(以JPS 為例)，如\n沒有請至TwinCAT System Manage 中，把網路線插入第一個slave，scan\n到該JPS 裝置，接著點選該JPS 裝置。 \n路徑為EtherCAT  Advanced Settings  ESC Access  E2PROM  \nSmartView，點選Write EEPROM，選擇JPS(AURORA)，按OK 即可。 \n \n3. 確認D:\\L2100_1\\MACHINE\\ EtherCATConfig.ini 之參數設定，如下圖所示"
   },
@@ -396,9 +394,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p19_2.jpeg"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n19\n2. 硬體架構 \n2.1. GMC 硬體架構 \nGMC700 系統架構 \n下圖為GMC700 硬體系統架構,包含GMC700 運動控制卡,GMC 轉接板,兩\n組Slave I/O 卡.GMC700 運動控制卡主要安裝於電腦主機內,透過GMC API 函式\n庫來與軸卡進行溝通.GMC 轉接板主要連接至馬達驅動器,也可以透過內建的\nI/O,A/D,D/A 與編碼器來進行相關的應用.但GMC 轉接板內部僅提供4 個輸入接\n點(Input)及4 個輸出接點(Output),若需要更多的I/O 接點應用時,則需要額外搭配\nSlave I/O 擴充卡.目前整體GMC700 架構最大可以支援到6 張Slave I/O 擴充卡,\n每一張Slave I/O 擴充卡可能提供64 個輸入接點及64 個輸出接點."
   },
@@ -434,9 +430,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p21_2.jpeg"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n21\nGMC800 系統架構 \n下圖為GMC800 硬體系統架構,包含GMC800 運動控制卡,GMC 轉接板,兩\n組Slave I/O 卡.GMC800 運動控制卡主要安裝於電腦主機內,透過GMC API 函式\n庫來與軸卡進行溝通.GMC800 主要透過Panasonic RTEX 通訊協定來與\nPanasonic A4N/A5N 伺服系統整合,也可以透過內建的A/D 與編碼器來進行相關\n的應用.但若需要I/O 接點應用時,則需要額外搭配Slave I/O 擴充卡.目前整體\nGMC800 架構最大可以支援到6 張Slave I/O 擴充卡,每一張Slave I/O 擴充卡可\n能提供64 個輸入接點及64 個輸出接點."
   },
@@ -653,9 +647,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p33_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n33\nSLAVE1 J1~J4: I/O 接點連接埠"
   },
@@ -673,9 +665,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p34_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n34\nSLAVE2 J1~J4: I/O 接點連接埠"
   },
@@ -785,9 +775,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p40_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n40\n2.4.3. EIO4832 LED 燈號說明 \nLayout"
   },
@@ -842,10 +830,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p43_2.png",
-        "/static/images/L2100_maintenance_p43_3.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n43\n2.5. 機構尺寸 \n \n \n \n \n \nLCD 外觀尺寸 \n \nLCD 開孔尺寸"
   },
@@ -863,10 +848,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p44_2.png",
-        "/static/images/L2100_maintenance_p44_3.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n44\n \nOPERATION PANEL 外觀尺寸 \n \n \nOPERATION PANE 開孔尺寸"
   },
@@ -884,9 +866,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p45_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n45\n \n控制器裝置外觀尺寸"
   },
@@ -7408,9 +7388,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p257_2.jpeg"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n257 \n3.7.3. 操作面板線路圖"
   },
@@ -7428,9 +7406,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p258_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n258"
   },
@@ -7468,9 +7444,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p260_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n260 \n3.8.2. 轉接板零件位置圖"
   },
@@ -7488,10 +7462,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p261_2.png",
-        "/static/images/L2100_maintenance_p261_3.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n261 \n3.8.3. 轉接板線路圖 \n大轉接板"
   },
@@ -7509,10 +7480,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p262_2.png",
-        "/static/images/L2100_maintenance_p262_3.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n262"
   },
@@ -7530,9 +7498,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p263_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n263"
   },
@@ -7550,10 +7516,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p264_2.png",
-        "/static/images/L2100_maintenance_p264_3.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n264 \n小轉接板"
   },
@@ -7571,9 +7534,7 @@
       "codes": [
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p265_2.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n265"
   },
@@ -7610,10 +7571,7 @@
         "EtherCAT",
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p267_2.png",
-        "/static/images/L2100_maintenance_p267_3.png"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n267 \n \n \n003 \n驅動器設定 \n \nPanasonic A5N 及A5B 絕對式設定，當裝上電池後，會發生警報40.0(絕\n對式系統停機異常保護)，即使使用Panaterm 調機軟體裡面的Alarm 的\nClear 也清除不掉警報 \n 回覆： \n (1):使用Panaterm 調機軟體進入Monitor 裡面的Mul-turn CL 清除多圈 \n 值，儘管照警報40.0 的解釋是說內置電容器電壓低於規定值，但實際 \n 是需要清除多圈值，如下所示。 \n \n (2):使用GMC800 版本可以設定參數881(*絕對式編碼器功能)，設定絕對 \n 式軸向，如兩軸為X 與Z，分別是Bit 0(十進位數值為1)與Bit 2(十進 \n 位數值為4)，則參數881 則設為5，MENU參數診斷2絕對式原 \n 點，如下圖所示，先完成步驟1 清除多圈數值警報，再進行步驟2 把 \n 當下位置設為原點，EtherCAT 版本目前無法使用。 \n 參考參數：881 ~ 888"
   },
@@ -7632,9 +7590,7 @@
         "EtherCAT",
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p268_2.jpeg"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n268 \n \n \n004 \nEtherCAT 連線問題 \n \n當Console window 出現Working Counter ‘6’ read and ‘7’ \nexpected，如下圖所示 \n 回覆： \n (1):檢查各軸向網路線是否有插好。 \n (2):檢查各軸向網路線的in 與out 是否插對。 \n (3):檢查各軸向的初始化參數是否有設定，如JPS 驅動器須把 \n Pr460 設為1 才能完成EtherCAT 連線。 \n (4):檢查JPS 或TDE 的通訊卡是否有故障導致無法連線。 \n 參考參數：JPS Pr460 \n \n \n005 \n軸向無法移動 \n \n當配機初期，伺服軸向MPG 模式、JOG 模式無法移動 \n 回覆： \n (1):請先檢查控制器是否有發警報(Alarm)或警告(Warning)。 \n (2):請檢查伺服與主軸驅動器的顯示幕是否有發警報，某些警告不會秀 \n 在驅動器顯示幕上，需要使用調機軟體才知道問題。 \n (3):請先確認軸向號碼是否設定正確，MCS 參數24~27(X、Y、Z、CH4)、 \n 29(第一主軸)，請根據串接的順序設置，軸向請設定25X，主軸請設"
   },
@@ -7653,9 +7609,7 @@
         "G0",
         "2100"
       ],
-      "images": [
-        "/static/images/L2100_maintenance_p269_2.jpeg"
-      ]
+      "images": []
     },
     "text": "TURNING 2100 \n車床中文維護手冊 \n \n269 \n 定20X，其中的X 為串接順序。 \n (4):確認控制器的參數診斷1  MLC 頁面的S533 是否開啟。 \n (5):確認參數診斷1  MLC 頁面FEEDHOLD 的C001 有被解除。 \n (6):確認MCS 參數194(設定控制器Interlock 功能的選項)的數值是否為 \n 19，該數值表示不啟動Interlock 功能。 \n (7):MPG 手輪無法移動時，請檢查C16~19(X、Y、Z、CH4)、C502~503 \n(CH5、CH6)是否有啟動，暫存器R14 是否有數值，1 表示*1，2 表示\n*10、3 表示*100。 \n (8):JOG 模式無法移動時，請檢查C6~13、C31~34 是否有啟動，暫存器\nR17 是否有數值，1~15 表示0%~150%。 \n (9):執行G0 無法移動，可能是MCS 參數77 造成的，該參數設0 時，表\n示系統要回原點，G0 才能移動。 \n \n006 \n軸向驅動器問題 \n \n馬達運轉過程中，Panasonic 馬達發出喀搭咖搭聲 \n 回覆: \n 以下是Panasonic 原廠回覆 \n \n \n007 \n系統設定 \n \nD:\\L2100_1\\MACHINE\\ EtherCATConfig.ini \n 回覆: \n16.07.11.254 之後的核心版本，增加熱溫升卡"
   },
