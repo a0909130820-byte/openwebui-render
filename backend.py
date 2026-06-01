@@ -1,5 +1,4 @@
 import os
-import re
 from typing import List
 
 from fastapi import FastAPI
@@ -22,6 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# =========================
+# static 圖片資料夾
+# =========================
 if os.path.exists("static"):
     app.mount(
         "/static",
@@ -30,13 +32,21 @@ if os.path.exists("static"):
     )
 
 
+# =========================
+# 環境變數
+# =========================
 QDRANT_URL = os.getenv("QDRANT_URL", "")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# Render Environment 建議設定：
+# QDRANT_COLLECTION=l2100_manuals
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "l2100_manuals")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 
+# =========================
+# Qdrant
+# =========================
 qdrant = QdrantClient(
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY,
@@ -46,16 +56,26 @@ qdrant = QdrantClient(
 )
 
 
+# =========================
+# Gemini
+# =========================
 gemini_client = None
+
 if GEMINI_API_KEY:
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
 
+# =========================
+# Request Model
+# =========================
 class QueryRequest(BaseModel):
     query: str
     use_ollama: bool = True
 
 
+# =========================
+# API 首頁
+# =========================
 @app.get("/")
 def home():
     return {
@@ -65,15 +85,20 @@ def home():
         "qdrant_url_set": bool(QDRANT_URL),
         "qdrant_api_key_set": bool(QDRANT_API_KEY),
         "gemini_api_key_set": bool(GEMINI_API_KEY),
-        "gemini_model": GEMINI_MODEL,
     }
 
 
+# =========================
+# GPT風格前端 UI
+# =========================
 @app.get("/ui")
 def ui():
     return FileResponse("index.html")
 
 
+# =========================
+# 健康檢查：確認 Qdrant 是否連線
+# =========================
 @app.get("/health/qdrant")
 def qdrant_health():
     try:
@@ -92,122 +117,55 @@ def qdrant_health():
         }
 
 
+# =========================
+# 建立 context
+# =========================
 def build_context(results: List[dict]) -> str:
     context = ""
 
     for i, r in enumerate(results, 1):
-        metadata = r.get("metadata", {}) or {}
-        original_metadata = r.get("original_metadata", {}) or {}
-
-        codes = (
-            r.get("codes")
-            or metadata.get("codes")
-            or original_metadata.get("codes")
-            or []
-        )
-
+        codes = r.get("codes", [])
         if isinstance(codes, list):
             codes_text = "、".join([str(c) for c in codes])
         else:
             codes_text = str(codes)
 
-        source_file = (
-            r.get("source_file")
-            or r.get("source_pdf")
-            or metadata.get("source_pdf")
-            or original_metadata.get("source_pdf")
-            or ""
-        )
-
-        page = (
-            r.get("page")
-            or metadata.get("page")
-            or original_metadata.get("page")
-            or ""
-        )
-
-        title = (
-            r.get("title")
-            or r.get("major_title")
-            or metadata.get("major_title")
-            or original_metadata.get("major_title")
-            or ""
-        )
-
-        section = (
-            r.get("section")
-            or metadata.get("section")
-            or original_metadata.get("section")
-            or ""
-        )
-
-        text = str(r.get("text", "")).strip()
-
         context += f"""
 【資料 {i}】
 
 來源：
-{source_file}
+{r.get("source_file", r.get("source_pdf", ""))}
 
 頁碼：
-{page}
+{r.get("page", "")}
 
 標題：
-{title}
+{r.get("title", r.get("major_title", ""))}
 
 章節：
-{section}
+{r.get("section", "")}
 
 代碼：
 {codes_text}
 
+錯誤代碼：
+{r.get("error_code", "")}
+
 內容：
-{text[:2500]}
+{str(r.get("text", ""))[:2500]}
 """
 
     return context
 
 
-def collect_images(results: List[dict]) -> List[str]:
-    all_images = []
-
-    for payload in results:
-        metadata = payload.get("metadata", {}) or {}
-        original_metadata = payload.get("original_metadata", {}) or {}
-
-        image_sources = [
-            payload.get("images", []),
-            metadata.get("images", []),
-            original_metadata.get("images", []),
-        ]
-
-        for imgs in image_sources:
-            if not imgs:
-                continue
-
-            if isinstance(imgs, str):
-                imgs = [imgs]
-
-            for img in imgs:
-                if not img:
-                    continue
-
-                img = str(img).strip()
-
-                if not img.startswith("/static/") and not img.startswith("http"):
-                    img = "/static/images/" + img.lstrip("/")
-
-                if img not in all_images:
-                    all_images.append(img)
-
-    return all_images
-
-
+# =========================
+# Gemini 回答
+# =========================
 def generate_answer(query: str, results: List[dict]) -> str:
     context = build_context(results)
 
     if not gemini_client:
-        return "查到手冊資料，但未設定 Gemini API Key。\n\n" + context[:3000]
+        return context[:3000]
 
     prompt = f"""
 你是 CNC L2100 車床技術手冊 AI 助理。
@@ -242,103 +200,24 @@ def generate_answer(query: str, results: List[dict]) -> str:
 """
 
     response = gemini_client.models.generate_content(
-        model=GEMINI_MODEL,
+        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
         contents=prompt
     )
 
     return response.text
 
 
-
 # =========================
-# 輕量自然語句搜尋工具
-# 讓「G02是什麼」「G02怎麼用」「M03功能」可以先抽出 G02 / M03 再搜尋
+# 關鍵字搜尋
+# 重點：不限定 payload 欄位，整個 payload 都拿來比對
+# 這樣 codes / error_code / text / title / page 都能搜尋
 # =========================
-def normalize_search_text(text: str) -> str:
-    return (
-        str(text)
-        .upper()
-        .replace(" ", "")
-        .replace("　", "")
-        .replace("\n", "")
-        .replace("\\N", "")
-        .replace("－", "-")
-    )
-
-
-def extract_search_terms(query: str):
-    q = normalize_search_text(query)
-
-    patterns = [
-        r"G\d{1,3}(?:\.\d)?",
-        r"M\d{1,3}",
-        r"EIO\d+",
-        r"IO\d+",
-        r"INT\d+",
-        r"MOT\d+",
-        r"OP\d+",
-        r"RTEX\d+",
-        r"ETHERCAT",
-        r"\d{3,4}-[A-Z0-9]{1,6}",
-        r"\d{4}",
-    ]
-
-    terms = []
-
-    for pattern in patterns:
-        terms.extend(re.findall(pattern, q, flags=re.IGNORECASE))
-
-    # 中文詞也保留，例如：圓弧插補、主軸正轉
-    terms.extend(re.findall(r"[\u4e00-\u9fff]{2,}", query))
-
-    if not terms and q:
-        terms.append(q)
-
-    cleaned = []
-    for term in terms:
-        term = normalize_search_text(term)
-        if term and term not in cleaned:
-            cleaned.append(term)
-
-    return cleaned
-
-
-def payload_to_search_text(payload: dict) -> str:
-    metadata = payload.get("metadata", {}) or {}
-    if not isinstance(metadata, dict):
-        metadata = {}
-
-    original_metadata = payload.get("original_metadata", {}) or {}
-    if not isinstance(original_metadata, dict):
-        original_metadata = {}
-
-    parts = [
-        payload.get("source_file", ""),
-        payload.get("source_pdf", ""),
-        payload.get("manual_type", ""),
-        payload.get("page", ""),
-        payload.get("title", ""),
-        payload.get("section", ""),
-        payload.get("major_title", ""),
-        payload.get("minor_title", ""),
-        payload.get("error_code", ""),
-        payload.get("text", ""),
-        payload.get("embedding_text", ""),
-        metadata,
-        original_metadata,
-    ]
-
-    return normalize_search_text(" ".join([str(p) for p in parts if p is not None]))
-
 def keyword_search(query: str, limit: int = 5):
     results = []
     offset = None
+    q = query.lower().strip()
 
-    raw_query = str(query).strip()
-    raw_q = normalize_search_text(raw_query)
-    terms = extract_search_terms(raw_query)
-
-    if not raw_q:
+    if not q:
         return results
 
     for _ in range(100):
@@ -352,72 +231,67 @@ def keyword_search(query: str, limit: int = 5):
 
         for p in points:
             payload = p.payload or {}
-            search_text = payload_to_search_text(payload)
 
-            score = 0
+            # 直接搜尋整個 payload，避免欄位名稱不同造成查不到
+            search_text = str(payload).lower()
 
-            # 重點：G02是什麼 → terms 會有 G02
-            for term in terms:
-                if term and term in search_text:
-                    score += 10
+            if q in search_text:
+                results.append(payload)
 
-            # 如果原句完整命中，也加分
-            if raw_q and raw_q in search_text:
-                score += 3
-
-            # 中文詞弱命中
-            for word in re.findall(r"[\u4e00-\u9fff]{2,}", raw_query):
-                word = normalize_search_text(word)
-                if word and word in search_text:
-                    score += 2
-
-            if score > 0:
-                item = dict(payload)
-                item["_score"] = score
-                results.append(item)
+            if len(results) >= limit:
+                return results
 
         if offset is None:
             break
 
-    # 分數高的排前面
-    results.sort(key=lambda x: x.get("_score", 0), reverse=True)
+    return results
 
-    # 去重
-    unique = []
-    seen = set()
 
-    for r in results:
-        metadata = r.get("metadata", {}) or {}
+
+# =========================
+# 圖片收集
+# 只取最相關前 2 筆資料的圖片
+# 只讀 payload.images 與 metadata.images，不讀 original_metadata.images
+# =========================
+def collect_images_from_results(results: List[dict]) -> List[str]:
+    images = []
+
+    for payload in results[:2]:
+        metadata = payload.get("metadata", {}) or {}
+
         if not isinstance(metadata, dict):
             metadata = {}
 
-        source = (
-            r.get("source_file")
-            or r.get("source_pdf")
-            or metadata.get("source_pdf")
-            or ""
-        )
+        image_sources = [
+            payload.get("images", []),
+            metadata.get("images", []),
+        ]
 
-        page = (
-            r.get("page")
-            or metadata.get("page")
-            or ""
-        )
+        for imgs in image_sources:
+            if not imgs:
+                continue
 
-        text_head = str(r.get("text", ""))[:100]
-        key = (str(source), str(page), text_head)
+            if isinstance(imgs, str):
+                imgs = [imgs]
 
-        if key in seen:
-            continue
+            for img in imgs:
+                if not img:
+                    continue
 
-        seen.add(key)
-        unique.append(r)
+                img = str(img).strip()
 
-        if len(unique) >= limit:
-            return unique
+                if not img.startswith("/static/") and not img.startswith("http"):
+                    img = "/static/images/" + img.lstrip("/")
 
-    return unique
+                if img not in images:
+                    images.append(img)
 
+    return images
+
+
+# =========================
+# 搜尋 API
+# =========================
 @app.post("/search")
 def search(req: QueryRequest):
     query = req.query.strip()
@@ -428,8 +302,6 @@ def search(req: QueryRequest):
             limit=5
         )
 
-        images = collect_images(results)
-
         if not results:
             return {
                 "query": query,
@@ -437,21 +309,19 @@ def search(req: QueryRequest):
                 "count": 0,
                 "answer": "查無相關資料，請換一個關鍵字。",
                 "results": [],
-                "images": images
+                "images": []
             }
 
+        images = collect_images_from_results(results)
+
         try:
-            answer = generate_answer(query, results)
-            answer = f"查到 {len(results)} 筆手冊資料\n\n" + answer
+            answer = generate_answer(
+                query,
+                results
+            )
 
         except Exception as gemini_error:
-            fallback_context = build_context(results)
-            answer = (
-                f"查到 {len(results)} 筆手冊資料\n\n"
-                f"Gemini 生成失敗：{gemini_error}\n\n"
-                f"以下先顯示檢索到的原始資料：\n\n"
-                f"{fallback_context[:4000]}"
-            )
+            answer = f"Gemini 生成失敗：{gemini_error}"
 
         return {
             "query": query,
