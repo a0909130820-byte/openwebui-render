@@ -356,20 +356,29 @@ def keyword_search(query: str, limit: int = 5):
 
             score = 0
 
-            # 重點：G02是什麼 → terms 會有 G02
+            # 1. 完整句子命中，分數最高
+            if raw_q and raw_q in search_text:
+                score += 30
+
+            # 2. 代碼 / 英文 / 中文關鍵詞命中
+            matched_terms = 0
             for term in terms:
                 if term and term in search_text:
-                    score += 10
+                    matched_terms += 1
 
-            # 如果原句完整命中，也加分
-            if raw_q and raw_q in search_text:
-                score += 3
+                    # 代碼類給較高分：G02、M03、GMC700、EIO4832
+                    if re.match(r"^(G\d{1,3}(?:\.\d)?|M\d{1,3}|GMC\d+|EIO\d+|IO\d+|INT\d+|MOT\d+|OP\d+|RTEX\d+|ETHERCAT|\d{4})$", term):
+                        score += 15
+                    else:
+                        score += 8
 
-            # 中文詞弱命中
-            for word in re.findall(r"[\u4e00-\u9fff]{2,}", raw_query):
-                word = normalize_search_text(word)
-                if word and word in search_text:
-                    score += 2
+            # 3. 多關鍵詞同時命中加權，避免只命中「介面」就混入太多不相關資料
+            if len(terms) >= 2 and matched_terms >= 2:
+                score += matched_terms * 8
+
+            # 4. 如果問題有多個詞，但該資料只命中一個弱詞，降低干擾
+            if len(terms) >= 2 and matched_terms <= 1 and score < 15:
+                score = 0
 
             if score > 0:
                 item = dict(payload)
@@ -379,10 +388,8 @@ def keyword_search(query: str, limit: int = 5):
         if offset is None:
             break
 
-    # 分數高的排前面
     results.sort(key=lambda x: x.get("_score", 0), reverse=True)
 
-    # 去重
     unique = []
     seen = set()
 
@@ -404,7 +411,7 @@ def keyword_search(query: str, limit: int = 5):
             or ""
         )
 
-        text_head = str(r.get("text", ""))[:100]
+        text_head = str(r.get("text", ""))[:120]
         key = (str(source), str(page), text_head)
 
         if key in seen:
