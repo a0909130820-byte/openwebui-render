@@ -173,9 +173,12 @@ def collect_images(results: List[dict]) -> List[str]:
 
     for payload in results:
         metadata = payload.get("metadata", {}) or {}
+        original_metadata = payload.get("original_metadata", {}) or {}
+
         image_sources = [
             payload.get("images", []),
             metadata.get("images", []),
+            original_metadata.get("images", []),
         ]
 
         for imgs in image_sources:
