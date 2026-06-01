@@ -1,4 +1,5 @@
 import os
+import re
 import json
 from typing import List
 
@@ -370,12 +371,96 @@ def generate_answer(query: str, results: List[dict]) -> str:
 # 重點：不限定 payload 欄位，整個 payload 都拿來比對
 # 這樣 codes / error_code / text / title / page 都能搜尋
 # =========================
+
+# =========================
+# 輕量自然語句搜尋工具
+# 讓「G02是什麼」「G02 怎麼用」「M03功能」「231-E018怎麼排除」可以先抽出代碼再搜尋
+# 不使用 sentence-transformers，不增加 Render 負擔
+# =========================
+def normalize_search_text(text: str) -> str:
+    return (
+        str(text)
+        .upper()
+        .replace(" ", "")
+        .replace("　", "")
+        .replace("\n", "")
+        .replace("\\N", "")
+        .replace("－", "-")
+    )
+
+
+def extract_search_terms(query: str):
+    q = normalize_search_text(query)
+
+    patterns = [
+        r"G\d{1,3}(?:\.\d)?",
+        r"M\d{1,3}",
+        r"INT\d+",
+        r"MOT\d+",
+        r"OP\d+",
+        r"RTEX\d+",
+        r"ETHERCAT",
+        r"\d{3,4}-[A-Z0-9]{1,6}",
+        r"\d{4}",
+    ]
+
+    terms = []
+
+    for pattern in patterns:
+        terms.extend(re.findall(pattern, q, flags=re.IGNORECASE))
+
+    # 中文關鍵詞，例如：圓弧插補、主軸正轉、螺紋切削
+    chinese_terms = re.findall(r"[\u4e00-\u9fff]{2,}", query)
+    terms.extend(chinese_terms)
+
+    if not terms and q:
+        terms.append(q)
+
+    cleaned = []
+    for term in terms:
+        term = normalize_search_text(term)
+        if term and term not in cleaned:
+            cleaned.append(term)
+
+    return cleaned
+
+
+def payload_to_search_text(payload: dict) -> str:
+    metadata = payload.get("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    original_metadata = payload.get("original_metadata", {})
+    if not isinstance(original_metadata, dict):
+        original_metadata = {}
+
+    parts = [
+        payload.get("source_file", ""),
+        payload.get("source_pdf", ""),
+        payload.get("manual_type", ""),
+        payload.get("page", ""),
+        payload.get("title", ""),
+        payload.get("section", ""),
+        payload.get("major_title", ""),
+        payload.get("minor_title", ""),
+        payload.get("error_code", ""),
+        payload.get("text", ""),
+        payload.get("embedding_text", ""),
+        metadata,
+        original_metadata,
+    ]
+
+    return normalize_search_text(" ".join([str(p) for p in parts if p is not None]))
+
 def keyword_search(query: str, limit: int = 5):
     results = []
     offset = None
-    q = query.lower().strip()
 
-    if not q:
+    raw_query = str(query).strip()
+    raw_q = normalize_search_text(raw_query)
+    terms = extract_search_terms(raw_query)
+
+    if not raw_q:
         return results
 
     for _ in range(100):
@@ -389,21 +474,72 @@ def keyword_search(query: str, limit: int = 5):
 
         for p in points:
             payload = p.payload or {}
+            search_text = payload_to_search_text(payload)
 
-            # 直接搜尋整個 payload，避免欄位名稱不同造成查不到
-            search_text = str(payload).lower()
+            score = 0
 
-            if q in search_text:
-                results.append(payload)
+            # 主要：G02是什麼 → 抽出 G02 命中
+            for term in terms:
+                if term and term in search_text:
+                    score += 10
 
-            if len(results) >= limit:
-                return results
+            # 原句剛好命中時補分
+            if raw_q and raw_q in search_text:
+                score += 3
+
+            # 中文詞弱命中，例如「圓弧插補怎麼用」
+            for word in re.findall(r"[\u4e00-\u9fff]{2,}", raw_query):
+                word = normalize_search_text(word)
+                if word and word in search_text:
+                    score += 2
+
+            if score > 0:
+                item = dict(payload)
+                item["_score"] = score
+                results.append(item)
 
         if offset is None:
             break
 
-    return results
+    # 分數高的排前面
+    results.sort(key=lambda x: x.get("_score", 0), reverse=True)
 
+    # 去重：同一來源、同一頁、相同文字開頭只留一次
+    unique = []
+    seen = set()
+
+    for r in results:
+        metadata = r.get("metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        source = (
+            r.get("source_file")
+            or r.get("source_pdf")
+            or metadata.get("source_pdf")
+            or ""
+        )
+
+        page = (
+            r.get("page")
+            or metadata.get("page")
+            or ""
+        )
+
+        text_head = str(r.get("text", ""))[:100]
+
+        key = (str(source), str(page), text_head)
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        unique.append(r)
+
+        if len(unique) >= limit:
+            return unique
+
+    return unique
 
 # =========================
 # 搜尋 API
