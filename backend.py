@@ -1,6 +1,5 @@
 import os
 import re
-import json
 from typing import List
 
 from fastapi import FastAPI
@@ -45,16 +44,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # QDRANT_COLLECTION=l2100_manuals
 COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "l2100_manuals")
 
-# 圖片對照表：支援 image_map.json 格式
-# 例如：{"8": ["L2100_programming_p8_2.png"]}
-IMAGE_MAP_PATH = os.getenv("IMAGE_MAP_PATH", "image_map.json")
-
-if os.path.exists(IMAGE_MAP_PATH):
-    with open(IMAGE_MAP_PATH, "r", encoding="utf-8") as f:
-        IMAGE_MAP = json.load(f)
-else:
-    IMAGE_MAP = {}
-
 
 # =========================
 # Qdrant
@@ -97,8 +86,6 @@ def home():
         "qdrant_url_set": bool(QDRANT_URL),
         "qdrant_api_key_set": bool(QDRANT_API_KEY),
         "gemini_api_key_set": bool(GEMINI_API_KEY),
-        "image_map_path": IMAGE_MAP_PATH,
-        "image_map_loaded": bool(IMAGE_MAP),
     }
 
 
@@ -131,144 +118,6 @@ def qdrant_health():
         }
 
 
-
-# =========================
-# Payload / 圖片工具
-# 支援新版 payload:
-# {
-#   "metadata": {
-#       "page": 8,
-#       "source_pdf": "...",
-#       "section": "...",
-#       "images": [...]
-#   },
-#   "text": "..."
-# }
-# 也支援舊版 payload 直接放 images/page/source_file
-# =========================
-def get_metadata(payload: dict) -> dict:
-    metadata = payload.get("metadata", {})
-    if isinstance(metadata, dict):
-        return metadata
-    return {}
-
-
-def get_payload_value(payload: dict, key: str, default=""):
-    metadata = get_metadata(payload)
-
-    if key in payload and payload.get(key) not in [None, ""]:
-        return payload.get(key)
-
-    if key in metadata and metadata.get(key) not in [None, ""]:
-        return metadata.get(key)
-
-    if key == "source_file":
-        return (
-            payload.get("source_file")
-            or payload.get("source_pdf")
-            or metadata.get("source_pdf")
-            or default
-        )
-
-    if key == "title":
-        return (
-            payload.get("title")
-            or payload.get("major_title")
-            or metadata.get("major_title")
-            or default
-        )
-
-    return default
-
-
-def normalize_image_url(img: str) -> str:
-    img = str(img).strip()
-
-    if not img:
-        return ""
-
-    if img.startswith("http"):
-        return img
-
-    if img.startswith("/static/"):
-        return img
-
-    return "/static/images/" + img.lstrip("/")
-
-
-def get_images_from_payload(payload: dict):
-    metadata = get_metadata(payload)
-
-    images = []
-
-    # 1. 優先讀 Qdrant payload 裡的 images / metadata.images
-    image_sources = [
-        payload.get("images", []),
-        metadata.get("images", []),
-    ]
-
-    for imgs in image_sources:
-        if not imgs:
-            continue
-
-        if isinstance(imgs, str):
-            imgs = [imgs]
-
-        for img in imgs:
-            url = normalize_image_url(img)
-            if url and url not in images:
-                images.append(url)
-
-    # 2. 如果 payload 沒有 images，就用 image_map.json 按 page 補圖
-    if not images:
-        page = get_payload_value(payload, "page", "")
-        page_key = str(page)
-
-        if page_key in IMAGE_MAP:
-            for img in IMAGE_MAP[page_key]:
-                url = normalize_image_url(img)
-                if url and url not in images:
-                    images.append(url)
-
-    return images
-
-
-def collect_image_objects(results: list):
-    """
-    回傳給新版 index.html 的格式：
-    [
-      {
-        "url": "/static/images/xxx.png",
-        "source_file": "...",
-        "page": 8,
-        "section": "..."
-      }
-    ]
-    """
-    all_images = []
-    seen = set()
-
-    for payload in results:
-        source_file = get_payload_value(payload, "source_file", "未知手冊")
-        page = get_payload_value(payload, "page", "未知頁")
-        section = get_payload_value(payload, "section", "")
-
-        for url in get_images_from_payload(payload):
-            if url in seen:
-                continue
-
-            seen.add(url)
-
-            all_images.append({
-                "url": url,
-                "source_file": source_file,
-                "page": page,
-                "section": section,
-            })
-
-    return all_images
-
-
 # =========================
 # 建立 context
 # =========================
@@ -276,14 +125,7 @@ def build_context(results: List[dict]) -> str:
     context = ""
 
     for i, r in enumerate(results, 1):
-        metadata = get_metadata(r)
-
-        codes = (
-            r.get("codes")
-            or metadata.get("codes")
-            or []
-        )
-
+        codes = r.get("codes", [])
         if isinstance(codes, list):
             codes_text = "、".join([str(c) for c in codes])
         else:
@@ -293,16 +135,16 @@ def build_context(results: List[dict]) -> str:
 【資料 {i}】
 
 來源：
-{get_payload_value(r, "source_file", "")}
+{r.get("source_file", r.get("source_pdf", ""))}
 
 頁碼：
-{get_payload_value(r, "page", "")}
+{r.get("page", "")}
 
 標題：
-{get_payload_value(r, "title", "")}
+{r.get("title", r.get("major_title", ""))}
 
 章節：
-{get_payload_value(r, "section", "")}
+{r.get("section", "")}
 
 代碼：
 {codes_text}
@@ -372,11 +214,6 @@ def generate_answer(query: str, results: List[dict]) -> str:
 # 這樣 codes / error_code / text / title / page 都能搜尋
 # =========================
 
-# =========================
-# 輕量自然語句搜尋工具
-# 讓「G02是什麼」「G02 怎麼用」「M03功能」「231-E018怎麼排除」可以先抽出代碼再搜尋
-# 不使用 sentence-transformers，不增加 Render 負擔
-# =========================
 def normalize_search_text(text: str) -> str:
     return (
         str(text)
@@ -395,6 +232,8 @@ def extract_search_terms(query: str):
     patterns = [
         r"G\d{1,3}(?:\.\d)?",
         r"M\d{1,3}",
+        r"EIO\d+",
+        r"IO\d+",
         r"INT\d+",
         r"MOT\d+",
         r"OP\d+",
@@ -409,9 +248,7 @@ def extract_search_terms(query: str):
     for pattern in patterns:
         terms.extend(re.findall(pattern, q, flags=re.IGNORECASE))
 
-    # 中文關鍵詞，例如：圓弧插補、主軸正轉、螺紋切削
-    chinese_terms = re.findall(r"[\u4e00-\u9fff]{2,}", query)
-    terms.extend(chinese_terms)
+    terms.extend(re.findall(r"[\u4e00-\u9fff]{2,}", query))
 
     if not terms and q:
         terms.append(q)
@@ -426,11 +263,11 @@ def extract_search_terms(query: str):
 
 
 def payload_to_search_text(payload: dict) -> str:
-    metadata = payload.get("metadata", {})
+    metadata = payload.get("metadata", {}) or {}
     if not isinstance(metadata, dict):
         metadata = {}
 
-    original_metadata = payload.get("original_metadata", {})
+    original_metadata = payload.get("original_metadata", {}) or {}
     if not isinstance(original_metadata, dict):
         original_metadata = {}
 
@@ -451,6 +288,37 @@ def payload_to_search_text(payload: dict) -> str:
     ]
 
     return normalize_search_text(" ".join([str(p) for p in parts if p is not None]))
+
+
+def payload_images(payload: dict):
+    metadata = payload.get("metadata", {}) or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    images = []
+
+    # 只拿這筆資料自己的 images / metadata.images
+    # 不拿其他頁、不用 image_map 補圖，避免錯圖
+    for imgs in [payload.get("images", []), metadata.get("images", [])]:
+        if not imgs:
+            continue
+
+        if isinstance(imgs, str):
+            imgs = [imgs]
+
+        for img in imgs:
+            img = str(img).strip()
+            if not img:
+                continue
+
+            if not img.startswith("/static/") and not img.startswith("http"):
+                img = "/static/images/" + img.lstrip("/")
+
+            if img not in images:
+                images.append(img)
+
+    return images
+
 
 def keyword_search(query: str, limit: int = 5):
     results = []
@@ -478,16 +346,14 @@ def keyword_search(query: str, limit: int = 5):
 
             score = 0
 
-            # 主要：G02是什麼 → 抽出 G02 命中
+            # 例如 G02是什麼 → 抽出 G02；EIO4832 I/O介面說明 → 抽出 EIO4832
             for term in terms:
                 if term and term in search_text:
                     score += 10
 
-            # 原句剛好命中時補分
             if raw_q and raw_q in search_text:
                 score += 3
 
-            # 中文詞弱命中，例如「圓弧插補怎麼用」
             for word in re.findall(r"[\u4e00-\u9fff]{2,}", raw_query):
                 word = normalize_search_text(word)
                 if word and word in search_text:
@@ -501,31 +367,18 @@ def keyword_search(query: str, limit: int = 5):
         if offset is None:
             break
 
-    # 分數高的排前面
     results.sort(key=lambda x: x.get("_score", 0), reverse=True)
 
-    # 去重：同一來源、同一頁、相同文字開頭只留一次
     unique = []
     seen = set()
 
     for r in results:
-        metadata = r.get("metadata", {})
+        metadata = r.get("metadata", {}) or {}
         if not isinstance(metadata, dict):
             metadata = {}
 
-        source = (
-            r.get("source_file")
-            or r.get("source_pdf")
-            or metadata.get("source_pdf")
-            or ""
-        )
-
-        page = (
-            r.get("page")
-            or metadata.get("page")
-            or ""
-        )
-
+        source = r.get("source_file") or r.get("source_pdf") or metadata.get("source_pdf") or ""
+        page = r.get("page") or metadata.get("page") or ""
         text_head = str(r.get("text", ""))[:100]
 
         key = (str(source), str(page), text_head)
@@ -564,8 +417,13 @@ def search(req: QueryRequest):
                 "images": []
             }
 
-        # 回傳新版 index.html 可讀的圖片物件格式
-        images = collect_image_objects(results)
+        images = []
+
+        # 只顯示最相關前 2 筆資料的圖片，避免弱相關資料混入錯圖
+        for payload in results[:2]:
+            for img in payload_images(payload):
+                if img not in images:
+                    images.append(img)
 
         try:
             answer = generate_answer(
