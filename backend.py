@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from qdrant_client import QdrantClient
 from google import genai
+from sentence_transformers import SentenceTransformer
 
 
 app = FastAPI()
@@ -36,6 +37,7 @@ COLLECTION_NAME = os.getenv("QDRANT_COLLECTION", "l2100_manuals").strip()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-m3").strip()
 
 
 # =========================
@@ -55,6 +57,14 @@ if QDRANT_URL:
 gemini_client = None
 if GEMINI_API_KEY:
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+
+# Embedding model：用來做相似搜尋，不只靠關鍵字/代碼
+embed_model = None
+try:
+    embed_model = SentenceTransformer(EMBED_MODEL)
+    print(f"Embedding model loaded: {EMBED_MODEL}")
+except Exception as e:
+    print("Embedding model 載入失敗，將只使用關鍵字搜尋：", e)
 
 
 class QueryRequest(BaseModel):
@@ -76,6 +86,8 @@ def home():
         "qdrant_api_key_set": bool(QDRANT_API_KEY),
         "gemini_api_key_set": bool(GEMINI_API_KEY),
         "gemini_model": GEMINI_MODEL,
+        "embed_model": EMBED_MODEL,
+        "embed_model_loaded": embed_model is not None,
     }
 
 
@@ -281,6 +293,10 @@ def build_search_text(payload: Dict[str, Any]) -> str:
 
 
 def keyword_search(query: str, manual_type: str = "all", limit: int = 10):
+    """
+    關鍵字 / 代碼搜尋：
+    適合 G02、M03、參數0001、231-E018 這種精準查詢。
+    """
     if qdrant is None:
         raise RuntimeError("QDRANT_URL 沒有設定，後端無法連線 Qdrant")
 
@@ -312,22 +328,101 @@ def keyword_search(query: str, manual_type: str = "all", limit: int = 10):
                 if key in search_text:
                     score += 10
 
-            # 如果沒有抓到代碼，退回一般子字串搜尋
-            if score == 0:
-                q = normalize(query)
-                if q and q in search_text:
+            q = normalize(query)
+
+            # 讓「G02是什麼」「G02 是什麼？」這種句子也能命中
+            if q and q in search_text:
+                score += 3
+
+            # 中文詞彙部分命中，例如「圓弧」「螺紋」「主軸」
+            raw_query = str(query).strip()
+            for word in re.findall(r"[\u4e00-\u9fff]{2,}|[A-Za-z0-9]{2,}", raw_query):
+                word_n = normalize(word)
+                if word_n and word_n in search_text:
                     score += 1
 
             if score > 0:
                 item = dict(payload)
                 item["_score"] = score
+                item["_search_type"] = "keyword"
                 results.append(item)
 
         if offset is None:
             break
 
     results.sort(key=lambda x: x.get("_score", 0), reverse=True)
+    return dedupe_results(results, limit=limit)
 
+
+def semantic_search(query: str, manual_type: str = "all", limit: int = 10):
+    """
+    相似搜尋 / 語意搜尋：
+    適合「G02 是什麼」「圓弧插補怎麼用」「主軸正轉」這種自然語言問題。
+    """
+    if qdrant is None:
+        raise RuntimeError("QDRANT_URL 沒有設定，後端無法連線 Qdrant")
+
+    if embed_model is None:
+        return []
+
+    vector = embed_model.encode(
+        query,
+        normalize_embeddings=True
+    ).tolist()
+
+    hits = []
+
+    # qdrant-client 新版優先用 query_points，舊版 fallback 到 search
+    try:
+        response = qdrant.query_points(
+            collection_name=COLLECTION_NAME,
+            query=vector,
+            limit=limit * 3,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        if hasattr(response, "points"):
+            hits = response.points
+        else:
+            hits = response
+
+    except Exception:
+        hits = qdrant.search(
+            collection_name=COLLECTION_NAME,
+            query_vector=vector,
+            limit=limit * 3,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+    results = []
+
+    for h in hits:
+        payload = h.payload or {}
+
+        if manual_type != "all":
+            if manual_type_of(payload) != manual_type:
+                continue
+
+        item = dict(payload)
+
+        score = getattr(h, "score", None)
+        if score is None:
+            score = 0
+
+        # 語意分數乘上權重，避免完全被關鍵字分數壓過
+        item["_score"] = float(score) * 8
+        item["_search_type"] = "semantic"
+        results.append(item)
+
+        if len(results) >= limit:
+            break
+
+    return results
+
+
+def dedupe_results(results: List[dict], limit: int = 10) -> List[dict]:
     unique = []
     seen = set()
 
@@ -348,6 +443,31 @@ def keyword_search(query: str, manual_type: str = "all", limit: int = 10):
             break
 
     return unique
+
+
+def hybrid_search(query: str, manual_type: str = "all", limit: int = 10):
+    """
+    混合搜尋：
+    1. 先做關鍵字/代碼搜尋
+    2. 再做語意相似搜尋
+    3. 合併排序去重
+    """
+    keyword_results = keyword_search(
+        query=query,
+        manual_type=manual_type,
+        limit=limit
+    )
+
+    semantic_results = semantic_search(
+        query=query,
+        manual_type=manual_type,
+        limit=limit
+    )
+
+    merged = keyword_results + semantic_results
+    merged.sort(key=lambda x: x.get("_score", 0), reverse=True)
+
+    return dedupe_results(merged, limit=limit)
 
 
 # =========================
@@ -462,7 +582,7 @@ def search(req: QueryRequest):
     query = req.query.strip()
 
     try:
-        results = keyword_search(
+        results = hybrid_search(
             query=query,
             manual_type=req.manual_type,
             limit=10
