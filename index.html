@@ -1,287 +1,61 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>L2100 車床手冊 AI 助理</title>
+<title>⚙️ L2100 CNC AI</title>
 
 <style>
-*{box-sizing:border-box}
-body{
-    margin:0;
-    background:#0b1120;
-    color:#e5e7eb;
-    font-family:"Microsoft JhengHei",Arial,sans-serif;
-    height:100vh;
-    display:flex;
-}
-.sidebar{
-    width:280px;
-    background:#020617;
-    border-right:1px solid #1e293b;
-    padding:22px;
-}
-.logo{
-    font-size:22px;
-    font-weight:800;
-    margin-bottom:10px;
-}
-.sub{
-    color:#94a3b8;
-    font-size:14px;
-    line-height:1.6;
-    margin-bottom:22px;
-}
-.card{
-    background:#0f172a;
-    border:1px solid #1e293b;
-    border-radius:16px;
-    padding:14px;
-    margin-bottom:12px;
-    color:#cbd5e1;
-    font-size:14px;
-}
-.card b{color:white}
-.main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-}
-.topbar{
-    padding:18px 24px;
-    border-bottom:1px solid #1e293b;
-    background:#111827;
-    font-size:20px;
-    font-weight:bold;
-}
-.chat{
-    flex:1;
-    overflow-y:auto;
-    padding:28px;
-}
-.message{
-    max-width:920px;
-    margin:0 auto 22px auto;
-    padding:18px 20px;
-    border-radius:18px;
-    line-height:1.8;
-    white-space:pre-wrap;
-    word-break:break-word;
-}
-.user{
-    background:#2563eb;
-    color:white;
-}
-.bot{
-    background:#1e293b;
-    border:1px solid #334155;
-}
-.quick{
-    max-width:920px;
-    margin:0 auto 20px auto;
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-}
-.quick button{
-    background:#0f172a;
-    border:1px solid #334155;
-    color:#cbd5e1;
-    padding:10px 14px;
-    border-radius:999px;
-    cursor:pointer;
-}
-.quick button:hover{
-    background:#1e293b;
-    color:white;
-}
-.input-area{
-    display:flex;
-    gap:12px;
-    padding:20px 28px;
-    background:#111827;
-    border-top:1px solid #1e293b;
-}
-input{
-    flex:1;
-    padding:16px 18px;
-    border:none;
-    border-radius:16px;
-    background:#1e293b;
-    color:white;
-    font-size:16px;
-    outline:none;
-}
-button.send{
-    border:none;
-    border-radius:16px;
-    padding:16px 26px;
-    background:#22c55e;
-    color:white;
-    font-size:16px;
-    font-weight:bold;
-    cursor:pointer;
-}
-button.send:hover{background:#16a34a}
-.result-image{
-    width:100%;
-    max-width:760px;
-    display:block;
-    margin-top:16px;
-    border-radius:14px;
-    border:1px solid #475569;
-}
-.image-title{
-    margin-top:22px;
-    font-weight:bold;
-    color:#facc15;
-}
-.badge{
-    display:inline-block;
-    background:#334155;
-    color:#cbd5e1;
-    padding:3px 8px;
-    border-radius:999px;
-    font-size:12px;
-    margin-bottom:10px;
-}
-.loading{opacity:.75}
-@media(max-width:800px){
-    body{display:block}
-    .sidebar{display:none}
-    .main{height:100vh}
-}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#07111f;--panel:#0f172a;--card:rgba(15,23,42,.78);--border:rgba(148,163,184,.18);--text:#e5e7eb;--muted:#94a3b8;--blue:#60a5fa}
+body{font-family:"Microsoft JhengHei",system-ui,sans-serif;background:radial-gradient(circle at top left,rgba(37,99,235,.25),transparent 35%),radial-gradient(circle at bottom right,rgba(14,165,233,.18),transparent 35%),var(--bg);color:var(--text);height:100vh;overflow:hidden}
+.app{display:flex;height:100vh}.sidebar{width:330px;background:rgba(15,23,42,.86);border-right:1px solid var(--border);display:flex;flex-direction:column;backdrop-filter:blur(14px)}.sidebar-header{padding:20px;border-bottom:1px solid var(--border)}.logo-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.logo{font-size:22px;font-weight:800}.subtitle{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.5}.clear-btn{background:rgba(220,38,38,.9);padding:7px 10px;font-size:13px;border-radius:10px}.clear-btn:hover{background:#b91c1c}.history-list{flex:1;overflow-y:auto;padding:12px}.history-item{background:rgba(30,41,59,.72);border:1px solid transparent;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;transition:.18s}.history-item:hover{border-color:#3b82f6;transform:translateY(-1px)}.history-question{font-size:15px;font-weight:700;line-height:1.4;margin-bottom:8px}.history-time{color:var(--muted);font-size:12px}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}.header{min-height:74px;padding:18px 28px;border-bottom:1px solid var(--border);background:rgba(15,23,42,.72);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;gap:16px}.header h1{font-size:28px;font-weight:900}.header-badges{display:flex;gap:10px;flex-wrap:wrap}.badge{font-size:13px;color:#bfdbfe;background:rgba(37,99,235,.22);border:1px solid rgba(96,165,250,.25);padding:7px 10px;border-radius:999px}.chat-container{flex:1;overflow-y:auto;padding:30px}.input-area{padding:18px 24px;border-top:1px solid var(--border);background:rgba(15,23,42,.88);backdrop-filter:blur(14px)}.input-box{display:flex;gap:12px}textarea{flex:1;resize:none;border:1px solid var(--border);outline:none;background:rgba(30,41,59,.82);color:white;padding:16px;border-radius:16px;font-size:16px;height:72px;line-height:1.5}button{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;padding:12px 24px;border-radius:14px;font-size:16px;cursor:pointer;transition:.18s}button:hover{transform:translateY(-1px);filter:brightness(1.08)}.send-btn{min-width:100px;font-weight:700}
+.landing{max-width:1100px;margin:20px auto;text-align:center}.hero{background:linear-gradient(180deg,rgba(30,41,59,.72),rgba(15,23,42,.82));border:1px solid var(--border);border-radius:28px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.24)}.hero h2{font-size:42px;margin-bottom:16px;color:white}.hero p{color:#cbd5e1;line-height:1.9;font-size:17px}.quick-buttons{margin-top:28px;display:flex;flex-wrap:wrap;gap:14px;justify-content:center}.quick-buttons button{background:rgba(37,99,235,.86)}.arch{margin-top:28px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.arch-card{background:rgba(15,23,42,.72);border:1px solid var(--border);border-radius:18px;padding:18px 12px;min-height:96px}.arch-icon{font-size:26px;margin-bottom:8px}.arch-title{font-weight:800;color:#bfdbfe;margin-bottom:5px}.arch-desc{font-size:12px;color:var(--muted);line-height:1.5}.support-grid{margin-top:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:left}.support-card{background:rgba(15,23,42,.68);border:1px solid var(--border);border-radius:18px;padding:18px}.support-card h3{color:#93c5fd;font-size:16px;margin-bottom:8px}.support-card p{font-size:13px;color:#cbd5e1;line-height:1.6}
+.card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:26px;margin-bottom:22px;box-shadow:0 14px 40px rgba(0,0,0,.18)}.question{font-size:25px;font-weight:900;margin-bottom:18px;color:#93c5fd}.meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}.meta-pill{background:rgba(30,41,59,.9);border:1px solid var(--border);border-radius:999px;padding:8px 12px;color:#cbd5e1;font-size:13px}.answer{white-space:pre-wrap;line-height:1.85;font-size:16px}.section-title{margin-top:24px;margin-bottom:12px;font-size:19px;font-weight:900;color:#bfdbfe}.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}.source-card{background:rgba(30,41,59,.72);border:1px solid var(--border);border-radius:16px;padding:14px}.source-file{font-size:14px;font-weight:800;line-height:1.45}.source-page{margin-top:8px;color:#fde68a;font-size:13px}.ref-pages{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.page-chip{background:rgba(250,204,21,.15);color:#fde68a;border:1px solid rgba(250,204,21,.2);padding:7px 10px;border-radius:999px;font-size:13px}
+.carousel{margin-top:26px;background:rgba(15,23,42,.7);border:1px solid var(--border);border-radius:22px;overflow:hidden}.carousel-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;background:rgba(15,23,42,.95);border-bottom:1px solid var(--border)}.carousel-info{font-size:14px;color:#cbd5e1;line-height:1.6}.carousel-controls{display:flex;gap:8px}.carousel-controls button{padding:8px 12px;font-size:14px}.carousel-image-wrap{padding:16px;text-align:center}.carousel-image{width:100%;max-height:720px;object-fit:contain;border-radius:16px;border:1px solid var(--border);background:#020617;cursor:zoom-in}.modal{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:24px}.modal.active{display:flex}.modal img{max-width:96vw;max-height:92vh;object-fit:contain;border-radius:14px;background:#020617}.modal-close{position:fixed;top:18px;right:24px;background:#dc2626;border-radius:999px;padding:10px 14px;font-size:18px}.typing-cursor::after{content:"▋";color:#60a5fa;animation:blink .8s infinite}@keyframes blink{50%{opacity:0}}
+.loading{max-width:700px;margin:90px auto;text-align:center;padding:34px;border:1px solid var(--border);background:rgba(15,23,42,.8);border-radius:24px}.loader{width:42px;height:42px;border:4px solid rgba(96,165,250,.22);border-top-color:#60a5fa;border-radius:50%;margin:0 auto 18px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:900px){.sidebar{width:260px}.arch{grid-template-columns:1fr}.support-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
-
 <body>
+<div class="app">
+<aside class="sidebar"><div class="sidebar-header"><div class="logo-row"><div><div class="logo">⚙️ L2100 CNC AI</div><div class="subtitle">CNC 車床手冊智慧查詢系統</div></div><button class="clear-btn" onclick="clearHistory()" title="清除歷史紀錄">🗑</button></div></div><div class="history-list" id="historyList"></div></aside>
+<main class="main"><header class="header"><h1>⚙️ L2100 CNC AI</h1><div class="header-badges"><span class="badge">RAG 檢索</span><span class="badge">Qdrant</span><span class="badge">Gemini</span><span class="badge">手冊頁面圖片</span></div></header><section class="chat-container" id="chatContainer"></section><footer class="input-area"><div style="margin-bottom:10px;">
 
-<div class="sidebar">
-    <div class="logo">🔧 L2100 Manual AI</div>
-    <div class="sub">
-        只回答三本 L2100 車床手冊內的內容。<br>
-        適合查詢 G/M 指令、維護流程、參數、警報與圖片說明。
-    </div>
+<select id="manualSelect"
+    style="
+        width:100%;
+        padding:12px;
+        border-radius:12px;
+        background:#1e293b;
+        color:white;
+        border:1px solid #334155;
+    "
+>
 
-    <div class="card"><b>程式說明手冊</b><br>G 碼、M 碼、Macro、加工指令</div>
-    <div class="card"><b>中文維護手冊</b><br>軟體維護、硬體架構、I/O、故障排除</div>
-    <div class="card"><b>參數警報手冊</b><br>系統參數、警報、驅動器、通訊設定</div>
-</div>
+    <option value="all">
+        🔍 三本手冊全部搜尋（不知道選哪本）
+    </option>
 
-<div class="main">
+    <option value="programming">
+        📘 車床程式說明手冊
+    </option>
 
-<div class="topbar">
-    L2100 車床手冊 AI 助理
-</div>
+    <option value="maintenance">
+        🛠 車床中文維護手冊
+    </option>
 
-<div class="chat" id="chat">
+    <option value="parameter">
+        ⚠️ 車床參數警報手冊
+    </option>
 
-<div class="message bot">
-<span class="badge">三本手冊限定回答</span>
-你好，我是 L2100 車床手冊 AI 助理。
-
-你可以問：
-・G02 是什麼？
-・G04 怎麼用？
-・M03 是什麼功能？
-・參數 0002 是什麼？
-・MOT 警報怎麼排除？
-・EtherCAT 版本要注意什麼？
-</div>
-
-<div class="quick">
-    <button onclick="askQuick('G02 是什麼？')">G02 是什麼？</button>
-    <button onclick="askQuick('G04 暫停指令怎麼用？')">G04 暫停</button>
-    <button onclick="askQuick('參數 0002 是什麼？')">參數 0002</button>
-    <button onclick="askQuick('EtherCAT 版本要注意什麼？')">EtherCAT</button>
-    <button onclick="askQuick('M03 是什麼功能？')">M03 功能</button>
-</div>
+</select>
 
 </div>
 
-<div class="input-area">
-    <input id="query" placeholder="輸入 L2100 手冊問題，例如：G02 是什麼？" onkeydown="handleKey(event)">
-    <button class="send" onclick="sendMessage()">送出</button>
+<div class="input-box"><textarea id="queryInput" placeholder="例如：G02 是什麼？、G32 螺紋切削、M03 主軸正轉、參數0001"></textarea><button class="send-btn" onclick="search()">查詢</button></div></footer></main>
 </div>
-
-</div>
-
+<div class="modal" id="imageModal" onclick="closeModal()"><button class="modal-close" onclick="closeModal()">✕</button><img id="modalImg" src=""></div>
 <script>
-const API_URL = "/search";
-
-function addMessage(text,type){
-    const chat=document.getElementById("chat");
-    const div=document.createElement("div");
-    div.className="message "+type;
-    div.innerHTML=text;
-    chat.appendChild(div);
-    chat.scrollTop=chat.scrollHeight;
-    return div;
-}
-
-function handleKey(event){
-    if(event.key==="Enter"){
-        sendMessage();
-    }
-}
-
-function askQuick(text){
-    document.getElementById("query").value=text;
-    sendMessage();
-}
-
-async function sendMessage(){
-    const input=document.getElementById("query");
-    const q=input.value.trim();
-    if(!q)return;
-
-    addMessage(q,"user");
-    input.value="";
-
-    const loading=addMessage("🔍 正在查詢三本 L2100 手冊...","bot loading");
-
-    try{
-        const res=await fetch(API_URL,{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-                query:q,
-                use_ollama:true
-            })
-        });
-
-        if(!res.ok){
-            loading.innerHTML=`API 錯誤：${res.status}`;
-            return;
-        }
-
-        const data=await res.json();
-
-        if(data.count===0){
-            loading.innerHTML="查無相關資料。請改用更明確的手冊關鍵字，例如 G02、M03、參數 0002、MOT 警報。";
-            return;
-        }
-
-        let html="";
-        html+=`<span class="badge">查到 ${data.count} 筆手冊資料</span>`;
-        html+=`<div>${data.answer}</div>`;
-
-        if(data.images && data.images.length>0){
-            html+=`<div class="image-title">相關手冊圖片：</div>`;
-            for(const img of data.images){
-                html+=`<img src="${img}" class="result-image" loading="lazy">`;
-            }
-        }
-
-        loading.classList.remove("loading");
-        loading.innerHTML=html;
-
-    }catch(err){
-        console.error(err);
-        loading.innerHTML="API 連線失敗，請確認 Render 是否已 Live。";
-    }
-}
-</script>
-
-</body>
-</html>
+const API_URL="/search";let historyData=JSON.parse(localStorage.getItem("cnc_history")||"[]");let currentImages=[];let currentImageIndex=0;let typingTimer=null;
+function landingHTML(message=""){return `<div class="landing"><div class="hero"><h2>⚙️ L2100 CNC AI</h2><p>本系統可查詢 L2100 車床程式說明手冊、中文維護手冊、參數警報手冊。<br>支援 G碼、M碼、參數、警報、EtherCAT、接線、維護流程與加工指令查詢。${message?"<br><br>"+message:""}</p><div class="quick-buttons"><button onclick="quickAsk('G02 是什麼？')">G02 是什麼？</button><button onclick="quickAsk('G32 螺紋切削')">G32 螺紋切削</button><button onclick="quickAsk('M03 主軸正轉')">M03 主軸正轉</button><button onclick="quickAsk('EtherCAT 警報')">EtherCAT 警報</button><button onclick="quickAsk('參數0001')">參數0001</button></div><div class="arch"><div class="arch-card"><div class="arch-icon">👤</div><div class="arch-title">使用者提問</div><div class="arch-desc">輸入 G碼、M碼、警報或參數問題</div></div><div class="arch-card"><div class="arch-icon">🔎</div><div class="arch-title">Qdrant 檢索</div><div class="arch-desc">從手冊資料庫找出相關段落</div></div><div class="arch-card"><div class="arch-icon">🧩</div><div class="arch-title">RAG 組合</div><div class="arch-desc">整理檢索內容與來源頁碼</div></div><div class="arch-card"><div class="arch-icon">🤖</div><div class="arch-title">Gemini 回答</div><div class="arch-desc">依據手冊內容生成繁中說明</div></div><div class="arch-card"><div class="arch-icon">🖼️</div><div class="arch-title">圖片輔助</div><div class="arch-desc">顯示對應章節的手冊頁面圖</div></div></div><div class="support-grid"><div class="support-card"><h3>📘 程式說明</h3><p>G00、G01、G02/G03、G32、固定循環與加工指令。</p></div><div class="support-card"><h3>🛠 維護手冊</h3><p>EtherCAT、硬體架構、接線、I/O、警報與維護流程。</p></div><div class="support-card"><h3>⚠️ 參數警報</
