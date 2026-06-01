@@ -1,5 +1,26 @@
 {
+  "80": [
+    "L2100_parameter_alarm_p80_2.png"
+  ],
+  "81": [
+    "L2100_parameter_alarm_p81_2.png"
+  ],
   "119": [
     "L2100_parameter_alarm_p119_2.png"
-  ]
+  ],
+  "120": [
+    "L2100_parameter_alarm_p120_2.png"
+  ],
+  "243": [
+    "L2100_parameter_alarm_p243_2.png"
+  ],
+  "244": [
+    "L2100_parameter_alarm_p244_2.png"
+  ],
+  "252": [
+    "L2100_parameter_alarm_p252_2.png"
+  ],
+  "253": [
+    "L2100_parameter_alarm_p253_2.png"
+  ] 
 }
