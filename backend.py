@@ -549,6 +549,94 @@ def keyword_search(query: str, limit: int = 5):
     return final_results
 
 
+def collect_title_related_images(results: List[dict], max_images: int = 12) -> List[str]:
+    """
+    只補抓「同標題 / 同副標題 / 同 section」的圖片。
+    不用鄰近頁，避免抓到不相關圖片。
+
+    用途：
+    G02 主文字可能在第 7 頁，但第 8、9 頁仍屬於同一個
+    section / minor_title：1.3 圓弧插值(G02/G03)
+    即使第 8、9 頁文字沒有直接出現 G02，也可以把該章節圖片補回來。
+    """
+    images: List[str] = []
+
+    def add_images(payload: Dict[str, Any]):
+        for img in payload.get("images", []):
+            if img and img not in images:
+                images.append(img)
+
+    # 先保留原本搜尋結果自己的圖片
+    for r in results:
+        add_images(r)
+
+    target_pdfs = set()
+    target_manual_types = set()
+    target_headings = set()
+
+    for r in results:
+        source_pdf = str(r.get("source_pdf", "")).strip()
+        manual_type = str(r.get("manual_type", "")).strip()
+
+        if source_pdf:
+            target_pdfs.add(source_pdf)
+        if manual_type:
+            target_manual_types.add(manual_type)
+
+        for field in ["section", "minor_title", "title"]:
+            heading = str(r.get(field, "")).strip()
+            heading_norm = normalize_for_search(heading)
+
+            # 避免把太短或只有頁碼的標題拿來關聯，防止誤抓
+            if heading_norm and len(heading_norm) >= 4 and not heading_norm.isdigit():
+                target_headings.add(heading_norm)
+
+    if not target_pdfs or not target_headings:
+        return images[:max_images]
+
+    offset = None
+
+    for _ in range(200):
+        points, offset = qdrant.scroll(
+            collection_name=COLLECTION_NAME,
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        for p in points:
+            payload = normalize_payload(p.payload or {})
+
+            if not payload.get("images"):
+                continue
+
+            if str(payload.get("source_pdf", "")).strip() not in target_pdfs:
+                continue
+
+            if target_manual_types and str(payload.get("manual_type", "")).strip() not in target_manual_types:
+                continue
+
+            candidate_headings = []
+            for field in ["section", "minor_title", "title"]:
+                value = str(payload.get(field, "")).strip()
+                value_norm = normalize_for_search(value)
+                if value_norm and len(value_norm) >= 4 and not value_norm.isdigit():
+                    candidate_headings.append(value_norm)
+
+            # 只要候選頁面的 section / minor_title / title 與已命中結果相同，就補圖
+            if any(h in target_headings for h in candidate_headings):
+                add_images(payload)
+
+            if len(images) >= max_images:
+                return images[:max_images]
+
+        if offset is None:
+            break
+
+    return images[:max_images]
+
+
 @app.post("/search")
 def search(req: QueryRequest):
     query = req.query.strip()
@@ -566,11 +654,7 @@ def search(req: QueryRequest):
                 "images": [],
             }
 
-        images = []
-        for payload in results:
-            for img in payload.get("images", []):
-                if img and img not in images:
-                    images.append(img)
+        images = collect_title_related_images(results, max_images=12)
 
         try:
             answer = generate_answer(query, results)
