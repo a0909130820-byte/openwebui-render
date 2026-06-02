@@ -551,13 +551,12 @@ def keyword_search(query: str, limit: int = 5):
 
 def collect_title_related_images(results: List[dict], max_images: int = 12) -> List[str]:
     """
-    只補抓「同標題 / 同副標題 / 同 section」的圖片。
-    不用鄰近頁，避免抓到不相關圖片。
-
-    用途：
-    G02 主文字可能在第 7 頁，但第 8、9 頁仍屬於同一個
-    section / minor_title：1.3 圓弧插值(G02/G03)
-    即使第 8、9 頁文字沒有直接出現 G02，也可以把該章節圖片補回來。
+    圖片補抓邏輯：
+    - 不改 keyword_search()
+    - 不抓鄰近頁
+    - 只用 results[0] 第一筆最相關資料當圖片錨點
+    - 優先用 section 比對；section 不可用才用 minor_title / title
+    - 避免把 results 裡其他次要結果的標題也拿來補圖，造成 GMC800 問題抓到 EtherCAT 圖
     """
     images: List[str] = []
 
@@ -566,32 +565,33 @@ def collect_title_related_images(results: List[dict], max_images: int = 12) -> L
             if img and img not in images:
                 images.append(img)
 
-    # 先保留原本搜尋結果自己的圖片
-    for r in results:
-        add_images(r)
+    if not results:
+        return images
 
-    target_pdfs = set()
-    target_manual_types = set()
-    target_headings = set()
+    # 只用第一筆最相關結果當圖片關聯基準，不使用全部 results
+    anchor = results[0]
 
-    for r in results:
-        source_pdf = str(r.get("source_pdf", "")).strip()
-        manual_type = str(r.get("manual_type", "")).strip()
+    # 先保留第一筆結果自己的圖片
+    add_images(anchor)
 
-        if source_pdf:
-            target_pdfs.add(source_pdf)
-        if manual_type:
-            target_manual_types.add(manual_type)
+    anchor_pdf = str(anchor.get("source_pdf", "")).strip()
+    anchor_manual_type = str(anchor.get("manual_type", "")).strip()
 
-        for field in ["section", "minor_title", "title"]:
-            heading = str(r.get(field, "")).strip()
-            heading_norm = normalize_for_search(heading)
+    # 優先使用 section；沒有 section 才退回 minor_title / title
+    anchor_key_type = ""
+    anchor_key_value = ""
 
-            # 避免把太短或只有頁碼的標題拿來關聯，防止誤抓
-            if heading_norm and len(heading_norm) >= 4 and not heading_norm.isdigit():
-                target_headings.add(heading_norm)
+    for field in ["section", "minor_title", "title"]:
+        value = str(anchor.get(field, "")).strip()
+        value_norm = normalize_for_search(value)
 
-    if not target_pdfs or not target_headings:
+        # 避免空值、太短值、純頁碼造成誤抓
+        if value_norm and len(value_norm) >= 4 and not value_norm.isdigit():
+            anchor_key_type = field
+            anchor_key_value = value_norm
+            break
+
+    if not anchor_pdf or not anchor_key_value:
         return images[:max_images]
 
     offset = None
@@ -611,21 +611,16 @@ def collect_title_related_images(results: List[dict], max_images: int = 12) -> L
             if not payload.get("images"):
                 continue
 
-            if str(payload.get("source_pdf", "")).strip() not in target_pdfs:
+            if str(payload.get("source_pdf", "")).strip() != anchor_pdf:
                 continue
 
-            if target_manual_types and str(payload.get("manual_type", "")).strip() not in target_manual_types:
+            if anchor_manual_type and str(payload.get("manual_type", "")).strip() != anchor_manual_type:
                 continue
 
-            candidate_headings = []
-            for field in ["section", "minor_title", "title"]:
-                value = str(payload.get(field, "")).strip()
-                value_norm = normalize_for_search(value)
-                if value_norm and len(value_norm) >= 4 and not value_norm.isdigit():
-                    candidate_headings.append(value_norm)
+            candidate_value = normalize_for_search(str(payload.get(anchor_key_type, "")).strip())
 
-            # 只要候選頁面的 section / minor_title / title 與已命中結果相同，就補圖
-            if any(h in target_headings for h in candidate_headings):
+            # 嚴格比對同一個 section / minor_title / title
+            if candidate_value == anchor_key_value:
                 add_images(payload)
 
             if len(images) >= max_images:
@@ -635,7 +630,6 @@ def collect_title_related_images(results: List[dict], max_images: int = 12) -> L
             break
 
     return images[:max_images]
-
 
 @app.post("/search")
 def search(req: QueryRequest):
