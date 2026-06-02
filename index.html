@@ -1,55 +1,300 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚙️ L2100 CNC AI</title>
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>CNC AI 助理</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#07111f;--panel:#0f172a;--card:rgba(15,23,42,.78);--border:rgba(148,163,184,.18);--text:#e5e7eb;--muted:#94a3b8;--blue:#60a5fa}
-body{font-family:"Microsoft JhengHei",system-ui,sans-serif;background:radial-gradient(circle at top left,rgba(37,99,235,.25),transparent 35%),radial-gradient(circle at bottom right,rgba(14,165,233,.18),transparent 35%),var(--bg);color:var(--text);height:100vh;overflow:hidden}
-.app{display:flex;height:100vh}.sidebar{width:330px;background:rgba(15,23,42,.86);border-right:1px solid var(--border);display:flex;flex-direction:column;backdrop-filter:blur(14px)}.sidebar-header{padding:20px;border-bottom:1px solid var(--border)}.logo-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.logo{font-size:22px;font-weight:800}.subtitle{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.5}.clear-btn{background:rgba(220,38,38,.9);padding:7px 10px;font-size:13px;border-radius:10px}.clear-btn:hover{background:#b91c1c}.history-list{flex:1;overflow-y:auto;padding:12px}.history-item{background:rgba(30,41,59,.72);border:1px solid transparent;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;transition:.18s}.history-item:hover{border-color:#3b82f6;transform:translateY(-1px)}.history-question{font-size:15px;font-weight:700;line-height:1.4;margin-bottom:8px}.history-time{color:var(--muted);font-size:12px}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}.header{min-height:74px;padding:18px 28px;border-bottom:1px solid var(--border);background:rgba(15,23,42,.72);backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:space-between;gap:16px}.header h1{font-size:28px;font-weight:900}.header-badges{display:flex;gap:10px;flex-wrap:wrap}.badge{font-size:13px;color:#bfdbfe;background:rgba(37,99,235,.22);border:1px solid rgba(96,165,250,.25);padding:7px 10px;border-radius:999px}.chat-container{flex:1;overflow-y:auto;padding:30px}.input-area{padding:18px 24px;border-top:1px solid var(--border);background:rgba(15,23,42,.88);backdrop-filter:blur(14px)}.input-box{display:flex;gap:12px}textarea{flex:1;resize:none;border:1px solid var(--border);outline:none;background:rgba(30,41,59,.82);color:white;padding:16px;border-radius:16px;font-size:16px;height:72px;line-height:1.5}button{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;border:none;padding:12px 24px;border-radius:14px;font-size:16px;cursor:pointer;transition:.18s}button:hover{transform:translateY(-1px);filter:brightness(1.08)}.send-btn{min-width:100px;font-weight:700}
-.landing{max-width:1100px;margin:20px auto;text-align:center}.hero{background:linear-gradient(180deg,rgba(30,41,59,.72),rgba(15,23,42,.82));border:1px solid var(--border);border-radius:28px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.24)}.hero h2{font-size:42px;margin-bottom:16px;color:white}.hero p{color:#cbd5e1;line-height:1.9;font-size:17px}.quick-buttons{margin-top:28px;display:flex;flex-wrap:wrap;gap:14px;justify-content:center}.quick-buttons button{background:rgba(37,99,235,.86)}.arch{margin-top:28px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.arch-card{background:rgba(15,23,42,.72);border:1px solid var(--border);border-radius:18px;padding:18px 12px;min-height:96px}.arch-icon{font-size:26px;margin-bottom:8px}.arch-title{font-weight:800;color:#bfdbfe;margin-bottom:5px}.arch-desc{font-size:12px;color:var(--muted);line-height:1.5}.support-grid{margin-top:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:left}.support-card{background:rgba(15,23,42,.68);border:1px solid var(--border);border-radius:18px;padding:18px}.support-card h3{color:#93c5fd;font-size:16px;margin-bottom:8px}.support-card p{font-size:13px;color:#cbd5e1;line-height:1.6}
-.card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:26px;margin-bottom:22px;box-shadow:0 14px 40px rgba(0,0,0,.18)}.question{font-size:25px;font-weight:900;margin-bottom:18px;color:#93c5fd}.meta-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}.meta-pill{background:rgba(30,41,59,.9);border:1px solid var(--border);border-radius:999px;padding:8px 12px;color:#cbd5e1;font-size:13px}.answer{white-space:pre-wrap;line-height:1.85;font-size:16px}.section-title{margin-top:24px;margin-bottom:12px;font-size:19px;font-weight:900;color:#bfdbfe}.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}.source-card{background:rgba(30,41,59,.72);border:1px solid var(--border);border-radius:16px;padding:14px}.source-file{font-size:14px;font-weight:800;line-height:1.45}.source-page{margin-top:8px;color:#fde68a;font-size:13px}.ref-pages{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.page-chip{background:rgba(250,204,21,.15);color:#fde68a;border:1px solid rgba(250,204,21,.2);padding:7px 10px;border-radius:999px;font-size:13px}
-.carousel{margin-top:26px;background:rgba(15,23,42,.7);border:1px solid var(--border);border-radius:22px;overflow:hidden}.carousel-top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;background:rgba(15,23,42,.95);border-bottom:1px solid var(--border)}.carousel-info{font-size:14px;color:#cbd5e1;line-height:1.6}.carousel-controls{display:flex;gap:8px}.carousel-controls button{padding:8px 12px;font-size:14px}.carousel-image-wrap{padding:16px;text-align:center}.carousel-image{width:100%;max-height:720px;object-fit:contain;border-radius:16px;border:1px solid var(--border);background:#020617;cursor:zoom-in}.modal{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:24px}.modal.active{display:flex}.modal img{max-width:96vw;max-height:92vh;object-fit:contain;border-radius:14px;background:#020617}.modal-close{position:fixed;top:18px;right:24px;background:#dc2626;border-radius:999px;padding:10px 14px;font-size:18px}.typing-cursor::after{content:"▋";color:#60a5fa;animation:blink .8s infinite}@keyframes blink{50%{opacity:0}}
-.loading{max-width:700px;margin:90px auto;text-align:center;padding:34px;border:1px solid var(--border);background:rgba(15,23,42,.8);border-radius:24px}.loader{width:42px;height:42px;border:4px solid rgba(96,165,250,.22);border-top-color:#60a5fa;border-radius:50%;margin:0 auto 18px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:900px){.sidebar{width:260px}.arch{grid-template-columns:1fr}.support-grid{grid-template-columns:1fr}.header{align-items:flex-start;flex-direction:column}}
+* {
+    box-sizing:border-box;
+}
+body {
+    margin:0;
+    background:#0f172a;
+    color:white;
+    font-family:Arial;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+.header {
+    padding:18px 24px;
+    background:#111827;
+    border-bottom:1px solid #334155;
+    font-size:24px;
+    font-weight:bold;
+}
+.chat {
+    flex:1;
+    overflow-y:auto;
+    padding:30px 20px;
+}
+.message {
+    max-width:900px;
+    margin:auto;
+    margin-bottom:24px;
+    padding:18px;
+    border-radius:16px;
+    line-height:1.8;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+.user {
+    background:#2563eb;
+}
+.bot {
+    background:#1e293b;
+    border:1px solid #334155;
+}
+.input-area {
+    display:flex;
+    gap:12px;
+    padding:20px;
+    background:#111827;
+    border-top:1px solid #334155;
+}
+input {
+    flex:1;
+    padding:16px;
+    border:none;
+    border-radius:14px;
+    font-size:16px;
+    outline:none;
+    background:#1e293b;
+    color:white;
+}
+button {
+    border:none;
+    border-radius:14px;
+    padding:16px 24px;
+    background:#22c55e;
+    color:white;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:bold;
+}
+button:hover {
+    background:#16a34a;
+}
+.result-image {
+    width:100%;
+    max-width:700px;
+    border-radius:14px;
+    border:1px solid #475569;
+    margin-top:18px;
+}
+.image-title {
+    margin-top:25px;
+    margin-bottom:10px;
+    font-size:18px;
+    font-weight:bold;
+}
+.loading {
+    opacity:0.7;
+}
 </style>
+
 </head>
+
 <body>
-<div class="app">
-<aside class="sidebar"><div class="sidebar-header"><div class="logo-row"><div><div class="logo">⚙️ L2100 CNC AI</div><div class="subtitle">CNC 車床手冊智慧查詢系統</div></div><button class="clear-btn" onclick="clearHistory()" title="清除歷史紀錄">🗑</button></div></div><div class="history-list" id="historyList"></div></aside>
-<main class="main"><header class="header"><h1>⚙️ L2100 CNC AI</h1><div class="header-badges"><span class="badge">RAG 檢索</span><span class="badge">Qdrant</span><span class="badge">Gemini</span><span class="badge">手冊頁面圖片</span></div></header><section class="chat-container" id="chatContainer"></section><footer class="input-area"><div class="input-box"><textarea id="queryInput" placeholder="例如：G02 是什麼？、G32 螺紋切削、M03 主軸正轉、參數0001"></textarea><button class="send-btn" onclick="search()">查詢</button></div></footer></main>
+
+<div class="header">
+🔧 CNC AI 助理
 </div>
-<div class="modal" id="imageModal" onclick="closeModal()"><button class="modal-close" onclick="closeModal()">✕</button><img id="modalImg" src=""></div>
+
+<div
+    class="chat"
+    id="chat"
+>
+
+<div class="message bot">
+
+你好，我是 CNC AI 助理。
+
+你可以直接輸入：
+
+231-E018
+
+或：
+
+G02 是什麼？
+
+</div>
+
+</div>
+
+<div class="input-area">
+
+<input
+    id="query"
+    placeholder="輸入錯誤代碼或問題..."
+    onkeydown="handleKey(event)"
+>
+
+<button onclick="sendMessage()">
+送出
+</button>
+
+</div>
+
 <script>
-const API_URL="/search";let historyData=JSON.parse(localStorage.getItem("cnc_history")||"[]");let currentImages=[];let currentImageIndex=0;let typingTimer=null;
-function landingHTML(message=""){return `<div class="landing"><div class="hero"><h2>⚙️ L2100 CNC AI</h2><p>本系統可查詢 L2100 車床程式說明手冊、中文維護手冊、參數警報手冊。<br>支援 G碼、M碼、參數、警報、EtherCAT、接線、維護流程與加工指令查詢。${message?"<br><br>"+message:""}</p><div class="quick-buttons"><button onclick="quickAsk('G02 是什麼？')">G02 是什麼？</button><button onclick="quickAsk('G32 螺紋切削')">G32 螺紋切削</button><button onclick="quickAsk('M03 主軸正轉')">M03 主軸正轉</button><button onclick="quickAsk('EtherCAT 警報')">EtherCAT 警報</button><button onclick="quickAsk('參數0001')">參數0001</button></div><div class="arch"><div class="arch-card"><div class="arch-icon">👤</div><div class="arch-title">使用者提問</div><div class="arch-desc">輸入 G碼、M碼、警報或參數問題</div></div><div class="arch-card"><div class="arch-icon">🔎</div><div class="arch-title">Qdrant 檢索</div><div class="arch-desc">從手冊資料庫找出相關段落</div></div><div class="arch-card"><div class="arch-icon">🧩</div><div class="arch-title">RAG 組合</div><div class="arch-desc">整理檢索內容與來源頁碼</div></div><div class="arch-card"><div class="arch-icon">🤖</div><div class="arch-title">Gemini 回答</div><div class="arch-desc">依據手冊內容生成繁中說明</div></div><div class="arch-card"><div class="arch-icon">🖼️</div><div class="arch-title">圖片輔助</div><div class="arch-desc">顯示對應章節的手冊頁面圖</div></div></div><div class="support-grid"><div class="support-card"><h3>📘 程式說明</h3><p>G00、G01、G02/G03、G32、固定循環與加工指令。</p></div><div class="support-card"><h3>🛠 維護手冊</h3><p>EtherCAT、硬體架構、接線、I/O、警報與維護流程。</p></div><div class="support-card"><h3>⚠️ 參數警報</h3><p>系統參數、C軸參數、INT/MOT/OP/RTEX/EtherCAT 警報。</p></div></div></div></div>`}
-function saveHistory(){localStorage.setItem("cnc_history",JSON.stringify(historyData))}
-function renderHistory(){const historyList=document.getElementById("historyList");historyList.innerHTML="";if(historyData.length===0){historyList.innerHTML=`<div style="color:#94a3b8;padding:16px;line-height:1.6;font-size:14px;">尚無查詢紀錄。<br>查詢後會自動保存於此。</div>`;return}historyData.forEach((item,index)=>{historyList.innerHTML+=`<div class="history-item" onclick="loadHistory(${index})"><div class="history-question">${escapeHTML(item.query||"")}</div><div class="history-time">${item.time||""}</div></div>`})}
-function loadHistory(index){renderResult(historyData[index],false)}
-function clearHistory(){if(!confirm("確定要清除所有歷史紀錄嗎？")){return}localStorage.removeItem("cnc_history");historyData=[];renderHistory();document.getElementById("chatContainer").innerHTML=landingHTML("歷史紀錄已清除，可以重新開始查詢。")}
-function escapeHTML(str){return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
-function uniqueSources(data){const map=new Map();const arr=data.sources&&data.sources.length?data.sources:data.results||[];arr.forEach(s=>{const source_file=s.source_file||"";const page=s.page||"";if(!source_file||!page)return;const key=source_file+"::"+page;if(!map.has(key)){map.set(key,{source_file,page,title:s.title||""})}});return Array.from(map.values())}
-function renderSourceCards(data){const sources=uniqueSources(data);if(sources.length===0)return "";let html=`<div class="section-title">📖 本次參考來源</div><div class="sources">`;sources.forEach(s=>{html+=`<div class="source-card"><div class="source-file">${escapeHTML(s.source_file)}</div><div class="source-page">第 ${escapeHTML(s.page)} 頁</div></div>`});html+=`</div>`;const pages=[...new Set(sources.map(s=>s.page))].sort((a,b)=>Number(a)-Number(b));html+=`<div class="section-title">📑 參考頁碼</div><div class="ref-pages">${pages.map(p=>`<span class="page-chip">第 ${escapeHTML(p)} 頁</span>`).join("")}</div>`;return html}
-function normalizeImageUrl(url){url=String(url||"").trim().replaceAll("\\","/");if(!url)return "";if(url.startsWith("http"))return url;if(url.startsWith("/static/"))return url;if(url.startsWith("static/"))return "/"+url;return "/static/images/"+url.replace(/^\/+/, "")}
-function inferSourceFromImage(url){const name=String(url||"");if(name.includes("L2100_programming"))return "L2100 車床程式說明手冊.pdf";if(name.includes("L2100_maintenance"))return "L2100車床中文維護手冊(全).pdf";if(name.includes("L2100_parameter_alarm"))return "L2100車床參數警報手冊.pdf";return "未知手冊"}
-function inferPageFromImage(url){const m=String(url||"").match(/_p(\d+)_/);return m?m[1]:"未知"}
-function normalizeImages(images){if(!images||!Array.isArray(images))return [];return images.map(img=>{if(typeof img==="string"){const url=normalizeImageUrl(img);return {url:url,source_file:inferSourceFromImage(url),page:inferPageFromImage(url),section:""}}const url=normalizeImageUrl(img.url||img.path||img.src||img.image||"");return {url:url,source_file:img.source_file||img.source_pdf||inferSourceFromImage(url),page:img.page||inferPageFromImage(url),section:img.section||img.title||""}}).filter(img=>img.url)}
-function renderCarousel(images){images=normalizeImages(images);if(!images||images.length===0)return "";currentImages=images;currentImageIndex=0;const img=images[0];return `<div class="section-title">🖼️ 相關手冊頁面</div><div class="carousel"><div class="carousel-top"><div class="carousel-info" id="carouselInfo">${carouselInfoText(img,0,images.length)}</div><div class="carousel-controls"><button onclick="prevImage()">◀</button><button onclick="nextImage()">▶</button><button onclick="openModalCurrent()">放大</button></div></div><div class="carousel-image-wrap"><img id="carouselImage" class="carousel-image" src="${img.url}" onclick="openModalCurrent()" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=&quot;color:#fca5a5;padding:20px;text-align:center;&quot;>圖片讀取失敗：${escapeHTML(img.url)}</div>')"></div></div>`}
-function carouselInfoText(img,index,total){return `第 ${index+1} / ${total} 張<br>來源：${escapeHTML(img.source_file||"未知手冊")} ｜ 第 ${escapeHTML(img.page||"未知")} 頁${img.section?"<br>章節："+escapeHTML(img.section):""}`}
-function updateCarousel(){if(!currentImages.length)return;const img=currentImages[currentImageIndex];document.getElementById("carouselImage").src=img.url;document.getElementById("carouselInfo").innerHTML=carouselInfoText(img,currentImageIndex,currentImages.length)}
-function prevImage(){if(!currentImages.length)return;currentImageIndex=(currentImageIndex-1+currentImages.length)%currentImages.length;updateCarousel()}
-function nextImage(){if(!currentImages.length)return;currentImageIndex=(currentImageIndex+1)%currentImages.length;updateCarousel()}
-function openModalCurrent(){if(!currentImages.length)return;const img=currentImages[currentImageIndex];document.getElementById("modalImg").src=img.url;document.getElementById("imageModal").classList.add("active")}
-function closeModal(){document.getElementById("imageModal").classList.remove("active")}
-function typeText(element,text,speed=6){if(typingTimer)clearInterval(typingTimer);element.textContent="";element.classList.add("typing-cursor");let i=0;typingTimer=setInterval(()=>{element.textContent+=text.charAt(i);i++;if(i>=text.length){clearInterval(typingTimer);element.classList.remove("typing-cursor")}},speed)}
-function renderResult(data,animate=true){const chat=document.getElementById("chatContainer");const elapsed=data.elapsed!==undefined?data.elapsed+" 秒":"未提供";const count=data.count!==undefined?data.count:0;let html=`<div class="card"><div class="question">${escapeHTML(data.query||"")}</div><div class="meta-row"><span class="meta-pill">⏱ 搜尋耗時：${escapeHTML(elapsed)}</span><span class="meta-pill">📄 命中資料：${escapeHTML(count)} 筆</span><span class="meta-pill">🧠 RAG + 手冊頁面</span></div><div class="answer" id="answerText"></div>${renderSourceCards(data)}${renderCarousel(data.images||[])}</div>`;chat.innerHTML=html;const answerEl=document.getElementById("answerText");const answer=data.answer||"";if(animate){typeText(answerEl,answer)}else{answerEl.textContent=answer}}
-function quickAsk(q){document.getElementById("queryInput").value=q;search()}
-async function search(){const input=document.getElementById("queryInput");const query=input.value.trim();if(!query)return;const chat=document.getElementById("chatContainer");chat.innerHTML=`<div class="loading"><div class="loader"></div><div style="font-size:20px;font-weight:800;margin-bottom:8px;">搜尋中...</div><div style="color:#94a3b8;">正在檢索 Qdrant、整理 RAG 內容與手冊頁面</div></div>`;try{const response=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query:query,use_ollama:true})});const data=await response.json();data.time=new Date().toLocaleString();historyData.unshift(data);saveHistory();renderHistory();renderResult(data,true);input.value=""}catch(err){chat.innerHTML=`<div class="loading"><div style="font-size:22px;color:#fecaca;font-weight:900;">搜尋失敗</div><div style="margin-top:12px;color:#cbd5e1;">${escapeHTML(err)}</div></div>`}}
-document.getElementById("queryInput").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();search()}});
-renderHistory();if(historyData.length>0){renderResult(historyData[0],false)}else{document.getElementById("chatContainer").innerHTML=landingHTML()}
+const API_URL = "/search";
+
+function addMessage(text,type){
+
+    const chat=document.getElementById("chat");
+
+    const div=document.createElement("div");
+
+    div.className="message "+type;
+
+    div.innerHTML=text;
+
+    chat.appendChild(div);
+
+    chat.scrollTop=chat.scrollHeight;
+
+    return div;
+}
+
+function handleKey(event){
+
+    if(event.key==="Enter"){
+
+        sendMessage();
+    }
+}
+
+async function sendMessage(){
+
+    const input=document.getElementById("query");
+
+    const q=input.value.trim();
+
+    if(!q)return;
+
+    addMessage(q,"user");
+
+    input.value="";
+
+    const loading=addMessage(
+        "🔍 AI 搜尋中...",
+        "bot loading"
+    );
+
+    try{
+
+        const controller=new AbortController();
+
+        const timeout=setTimeout(()=>{
+
+            controller.abort();
+
+        },30000);
+
+        const res=await fetch(API_URL,{
+
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify({
+                query:q
+            }),
+
+            signal:controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if(!res.ok){
+
+            loading.innerHTML=
+            `API錯誤：${res.status}`;
+
+            return;
+        }
+
+        const data=await res.json();
+
+        console.log(data);
+
+        if(data.error){
+
+            loading.innerHTML=
+            `系統錯誤：<br>${data.error}`;
+
+            return;
+        }
+
+        if(data.count===0){
+
+            loading.innerHTML=
+            "查無相關資料";
+
+            return;
+        }
+
+        let html="";
+
+        html+=`
+        <div>
+        ${data.answer}
+        </div>
+        `;
+
+        if(data.images && data.images.length>0){
+
+            html+=`
+            <div class="image-title">
+            相關圖片：
+            </div>
+            `;
+
+            for(const img of data.images){
+
+                html+=`
+                <img
+                    src="${img}"
+                    class="result-image"
+                    loading="lazy"
+                >
+                `;
+            }
+        }
+
+        loading.classList.remove("loading");
+
+        loading.innerHTML=html;
+
+    }
+catch(err){
+
+        console.error(err);
+
+        if(err.name==="AbortError"){
+
+            loading.innerHTML=
+            "請求超時（Render 免費版可能正在喚醒）";
+
+        }else{
+
+            loading.innerHTML=
+            "API連線失敗";
+        }
+    }
+}
 </script>
+
 </body>
 </html>
