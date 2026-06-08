@@ -168,127 +168,6 @@ def build_context(results: List[dict]) -> str:
     return context
 
 
-def collect_images(results: List[dict]) -> List[str]:
-    """
-    圖片抓取邏輯：
-    1. 先抓搜尋結果本身 payload / metadata / original_metadata 裡的 images
-    2. 再依照搜尋結果的 source_pdf + page，到 Qdrant 裡補抓同一手冊、同一頁的所有圖片
-    3. 不只抓第一張；只要該頁 metadata 有圖片，就全部帶出來
-    """
-    all_images = []
-
-    def ensure_list(value):
-        if not value:
-            return []
-        if isinstance(value, list):
-            return value
-        return [value]
-
-    def normalize_image_path(img):
-        img = str(img).strip()
-
-        if not img:
-            return ""
-
-        if img.startswith("/static/") or img.startswith("http"):
-            return img
-
-        return "/static/images/" + img.lstrip("/")
-
-    def get_meta(payload):
-        metadata = payload.get("metadata", {}) or {}
-        if not isinstance(metadata, dict):
-            metadata = {}
-
-        original_metadata = payload.get("original_metadata", {}) or {}
-        if not isinstance(original_metadata, dict):
-            original_metadata = {}
-
-        return metadata, original_metadata
-
-    def get_source(payload):
-        metadata, original_metadata = get_meta(payload)
-
-        return (
-            payload.get("source_file")
-            or payload.get("source_pdf")
-            or metadata.get("source_pdf")
-            or metadata.get("source_file")
-            or original_metadata.get("source_pdf")
-            or original_metadata.get("source_file")
-            or ""
-        )
-
-    def get_page(payload):
-        metadata, original_metadata = get_meta(payload)
-
-        return (
-            payload.get("page")
-            or metadata.get("page")
-            or original_metadata.get("page")
-            or ""
-        )
-
-    def add_images_from_payload(payload):
-        metadata, original_metadata = get_meta(payload)
-
-        image_sources = [
-            payload.get("images", []),
-            metadata.get("images", []),
-            original_metadata.get("images", []),
-        ]
-
-        for imgs in image_sources:
-            for img in ensure_list(imgs):
-                img = normalize_image_path(img)
-
-                if img and img not in all_images:
-                    all_images.append(img)
-
-    # 先收集搜尋結果本身的圖片，並記錄命中資料的來源與頁碼
-    target_pages = set()
-
-    for payload in results:
-        add_images_from_payload(payload)
-
-        source = str(get_source(payload)).strip()
-        page = str(get_page(payload)).strip()
-
-        if source and page:
-            target_pages.add((source, page))
-
-    # 再補抓 Qdrant 裡同一手冊、同一頁的其他圖片
-    # 這樣如果某個 chunk 本身沒有 images，但同頁其他 chunk 有圖片，也會一起抓到
-    if target_pages:
-        try:
-            offset = None
-
-            for _ in range(100):
-                points, offset = qdrant.scroll(
-                    collection_name=COLLECTION_NAME,
-                    limit=100,
-                    offset=offset,
-                    with_payload=True,
-                    with_vectors=False
-                )
-
-                for point in points:
-                    payload = point.payload or {}
-
-                    source = str(get_source(payload)).strip()
-                    page = str(get_page(payload)).strip()
-
-                    if (source, page) in target_pages:
-                        add_images_from_payload(payload)
-
-                if offset is None:
-                    break
-
-        except Exception as e:
-            print("補抓同頁圖片失敗：", e)
-
-    return all_images
-
 
 def generate_answer(query: str, results: List[dict]) -> str:
     context = build_context(results)
@@ -341,6 +220,13 @@ def generate_answer(query: str, results: List[dict]) -> str:
 # 輕量自然語句搜尋工具
 # 讓「G02是什麼」「G02怎麼用」「M03功能」可以先抽出 G02 / M03 再搜尋
 # =========================
+
+
+
+
+# =========================
+# 搜尋輔助：中文不拆弱詞、標題/章節優先
+# =========================
 def normalize_search_text(text: str) -> str:
     return (
         str(text)
@@ -350,41 +236,36 @@ def normalize_search_text(text: str) -> str:
         .replace("\n", "")
         .replace("\\N", "")
         .replace("－", "-")
+        .replace("/", "")
+        .replace("_", "")
+        .replace("-", "")
     )
 
 
 def extract_search_terms(query: str):
     """
-    搜尋詞抽取邏輯：
-    1. 不把中文拆成單字或很多小詞
-    2. 不另外硬抽 G02/M03/GMC800/EIO4832 這種固定代碼規則
-    3. 只使用客戶原本輸入的問題，以及問題中連續出現的中文/英文/數字片段
-    4. 例如：
-       -「連接器腳位定義」→ 只用「連接器腳位定義」
-       -「G02是什麼」→ 用「G02是什麼」和「G02」
-       -「Slave I/O 介面說明」→ 用「SLAVEIO介面說明」和「SLAVEIO」、「介面說明」
+    不把中文拆成很多小詞。
+    只保留：
+    1. 完整問題
+    2. 使用者輸入中的連續英數片段，例如 G02、GMC800、EIO4832
+    3. 使用者輸入中的連續中文片段，例如 連接器腳位定義
     """
     raw = str(query).strip()
     q = normalize_search_text(raw)
 
     terms = []
 
-    # 1. 完整問題一定放第一個
     if q:
         terms.append(q)
 
-    # 2. 抽「連續英數」片段，不限定格式
-    #    這樣 G02、M03、GMC800、EIO4832 都會自然被抓到，
-    #    但不是靠寫死特定代碼規則。
-    alnum_parts = re.findall(r"[A-Za-z0-9]+", raw)
-    for part in alnum_parts:
+    # 連續英數，不限定固定代碼格式
+    for part in re.findall(r"[A-Za-z0-9]+", raw):
         part = normalize_search_text(part)
         if len(part) >= 2:
             terms.append(part)
 
-    # 3. 抽「連續中文」片段，不拆成小詞
-    chinese_parts = re.findall(r"[\u4e00-\u9fff]+", raw)
-    for part in chinese_parts:
+    # 連續中文，不拆成小詞
+    for part in re.findall(r"[\u4e00-\u9fff]+", raw):
         part = normalize_search_text(part)
         if len(part) >= 2:
             terms.append(part)
@@ -397,32 +278,91 @@ def extract_search_terms(query: str):
 
     return cleaned
 
-def payload_to_search_text(payload: dict) -> str:
-    metadata = payload.get("metadata", {}) or {}
-    if not isinstance(metadata, dict):
-        metadata = {}
 
-    original_metadata = payload.get("original_metadata", {}) or {}
-    if not isinstance(original_metadata, dict):
-        original_metadata = {}
+def get_search_metadata(payload: dict) -> dict:
+    metadata = payload.get("metadata", {}) or {}
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def build_title_search_text(payload: dict) -> str:
+    metadata = get_search_metadata(payload)
+
+    parts = [
+        payload.get("title", ""),
+        payload.get("section", ""),
+        payload.get("major_title", ""),
+        payload.get("minor_title", ""),
+        metadata.get("title", ""),
+        metadata.get("section", ""),
+        metadata.get("major_title", ""),
+        metadata.get("minor_title", ""),
+    ]
+
+    return normalize_search_text(" ".join([str(p) for p in parts if p is not None]))
+
+
+def build_body_search_text(payload: dict) -> str:
+    metadata = get_search_metadata(payload)
 
     parts = [
         payload.get("source_file", ""),
         payload.get("source_pdf", ""),
         payload.get("manual_type", ""),
         payload.get("page", ""),
-        payload.get("title", ""),
-        payload.get("section", ""),
-        payload.get("major_title", ""),
-        payload.get("minor_title", ""),
         payload.get("error_code", ""),
+        payload.get("codes", ""),
         payload.get("text", ""),
         payload.get("embedding_text", ""),
         metadata,
-        original_metadata,
     ]
 
     return normalize_search_text(" ".join([str(p) for p in parts if p is not None]))
+
+
+def collect_images(results: List[dict]) -> List[str]:
+    """
+    圖片只跟命中的資料走：
+    只讀 payload.images / metadata.images / original_metadata.images。
+    不再用 page 去 image_map 補圖，避免三本 PDF 同頁碼混圖。
+    """
+    all_images = []
+
+    for payload in results:
+        metadata = payload.get("metadata", {}) or {}
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        original_metadata = payload.get("original_metadata", {}) or {}
+        if not isinstance(original_metadata, dict):
+            original_metadata = {}
+
+        image_sources = [
+            payload.get("images", []),
+            metadata.get("images", []),
+            original_metadata.get("images", []),
+        ]
+
+        for imgs in image_sources:
+            if not imgs:
+                continue
+
+            if isinstance(imgs, str):
+                imgs = [imgs]
+
+            for img in imgs:
+                if not img:
+                    continue
+
+                img = str(img).strip()
+
+                if not img.startswith("/static/") and not img.startswith("http"):
+                    img = "/static/images/" + img.lstrip("/")
+
+                if img not in all_images:
+                    all_images.append(img)
+
+    return all_images
+
 
 def keyword_search(query: str, limit: int = 5):
     results = []
@@ -446,24 +386,47 @@ def keyword_search(query: str, limit: int = 5):
 
         for p in points:
             payload = p.payload or {}
-            search_text = payload_to_search_text(payload)
+
+            title_text = build_title_search_text(payload)
+            body_text = build_body_search_text(payload)
 
             score = 0
+            title_hits = 0
+            body_hits = 0
 
-            # 重點：G02是什麼 → terms 會有 G02
+            # 完整問題命中標題/章節：最高
+            if raw_q and raw_q in title_text:
+                score += 120
+
+            # 完整問題命中內文：次高
+            if raw_q and raw_q in body_text:
+                score += 50
+
             for term in terms:
-                if term and term in search_text:
-                    score += 10
+                if not term or term == raw_q:
+                    continue
 
-            # 如果原句完整命中，也加分
-            if raw_q and raw_q in search_text:
-                score += 3
+                # 使用者輸入中的連續片段命中標題/章節
+                if term in title_text:
+                    title_hits += 1
+                    score += 45
 
-            # 中文詞弱命中
-            for word in re.findall(r"[\u4e00-\u9fff]{2,}", raw_query):
-                word = normalize_search_text(word)
-                if word and word in search_text:
-                    score += 2
+                # 使用者輸入中的連續片段命中內文
+                elif term in body_text:
+                    body_hits += 1
+                    score += 18
+
+            # 多個連續片段同時命中標題，加權
+            if title_hits >= 2:
+                score += title_hits * 25
+
+            # 多個片段只在內文命中，保留但較低
+            if body_hits >= 2:
+                score += body_hits * 8
+
+            # 避免只命中很弱的單一片段就進結果
+            if len(terms) >= 2 and title_hits == 0 and body_hits <= 1 and score < 40:
+                score = 0
 
             if score > 0:
                 item = dict(payload)
@@ -473,10 +436,17 @@ def keyword_search(query: str, limit: int = 5):
         if offset is None:
             break
 
-    # 分數高的排前面
     results.sort(key=lambda x: x.get("_score", 0), reverse=True)
 
-    # 去重
+    # 相關度門檻：只保留接近第一名的結果，避免弱相關頁混進來
+    if results:
+        best_score = results[0].get("_score", 0)
+        min_score = best_score * 0.55
+        results = [
+            r for r in results
+            if r.get("_score", 0) >= min_score
+        ]
+
     unique = []
     seen = set()
 
@@ -489,6 +459,7 @@ def keyword_search(query: str, limit: int = 5):
             r.get("source_file")
             or r.get("source_pdf")
             or metadata.get("source_pdf")
+            or metadata.get("source_file")
             or ""
         )
 
@@ -498,7 +469,7 @@ def keyword_search(query: str, limit: int = 5):
             or ""
         )
 
-        text_head = str(r.get("text", ""))[:100]
+        text_head = str(r.get("text", ""))[:120]
         key = (str(source), str(page), text_head)
 
         if key in seen:
