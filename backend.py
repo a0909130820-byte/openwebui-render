@@ -354,32 +354,40 @@ def normalize_search_text(text: str) -> str:
 
 
 def extract_search_terms(query: str):
-    q = normalize_search_text(query)
-
-    patterns = [
-        r"G\d{1,3}(?:\.\d)?",
-        r"M\d{1,3}",
-        r"EIO\d+",
-        r"IO\d+",
-        r"INT\d+",
-        r"MOT\d+",
-        r"OP\d+",
-        r"RTEX\d+",
-        r"ETHERCAT",
-        r"\d{3,4}-[A-Z0-9]{1,6}",
-        r"\d{4}",
-    ]
+    """
+    搜尋詞抽取邏輯：
+    1. 不把中文拆成單字或很多小詞
+    2. 不另外硬抽 G02/M03/GMC800/EIO4832 這種固定代碼規則
+    3. 只使用客戶原本輸入的問題，以及問題中連續出現的中文/英文/數字片段
+    4. 例如：
+       -「連接器腳位定義」→ 只用「連接器腳位定義」
+       -「G02是什麼」→ 用「G02是什麼」和「G02」
+       -「Slave I/O 介面說明」→ 用「SLAVEIO介面說明」和「SLAVEIO」、「介面說明」
+    """
+    raw = str(query).strip()
+    q = normalize_search_text(raw)
 
     terms = []
 
-    for pattern in patterns:
-        terms.extend(re.findall(pattern, q, flags=re.IGNORECASE))
-
-    # 中文詞也保留，例如：圓弧插補、主軸正轉
-    terms.extend(re.findall(r"[\u4e00-\u9fff]{2,}", query))
-
-    if not terms and q:
+    # 1. 完整問題一定放第一個
+    if q:
         terms.append(q)
+
+    # 2. 抽「連續英數」片段，不限定格式
+    #    這樣 G02、M03、GMC800、EIO4832 都會自然被抓到，
+    #    但不是靠寫死特定代碼規則。
+    alnum_parts = re.findall(r"[A-Za-z0-9]+", raw)
+    for part in alnum_parts:
+        part = normalize_search_text(part)
+        if len(part) >= 2:
+            terms.append(part)
+
+    # 3. 抽「連續中文」片段，不拆成小詞
+    chinese_parts = re.findall(r"[\u4e00-\u9fff]+", raw)
+    for part in chinese_parts:
+        part = normalize_search_text(part)
+        if len(part) >= 2:
+            terms.append(part)
 
     cleaned = []
     for term in terms:
@@ -388,7 +396,6 @@ def extract_search_terms(query: str):
             cleaned.append(term)
 
     return cleaned
-
 
 def payload_to_search_text(payload: dict) -> str:
     metadata = payload.get("metadata", {}) or {}
